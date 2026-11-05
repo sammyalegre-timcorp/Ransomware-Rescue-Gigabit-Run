@@ -13,12 +13,11 @@ import { PodiumPhase } from './components/HostDisplay/PodiumPhase';
 import { MobileControllerView } from './components/MobileController/MobileControllerView';
 import { AdminPanel } from './components/AdminPanel/AdminPanel';
 import { soundEngine } from './services/sound';
-import { Volume2, VolumeX, Shield, Monitor } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 
 export default function App() {
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [liveRace, setLiveRace] = useState<LiveRaceDoc | null>(null);
-  const [showAdmin, setShowAdmin] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // Parse URL query params and pathname to determine view
@@ -51,12 +50,13 @@ export default function App() {
   const searchParams = new URLSearchParams(currentUrl.search);
   const isController = searchParams.get('role') === 'controller';
   const charParam = searchParams.get('char') as CharacterId | null;
+  // The admin page should ONLY be accessible by adding '/admin' to the url
   const isAdminRoute = currentUrl.pathname.includes('/admin') || searchParams.get('admin') === 'true';
 
   const toggleSound = () => {
     const next = !isMuted;
     setIsMuted(next);
-    soundEngine.isMuted = next;
+    soundEngine.setMuted(next);
     if (!next) {
       soundEngine.playClick();
     }
@@ -67,16 +67,13 @@ export default function App() {
     setCurrentUrl({ pathname: path, search });
   };
 
-  // 1. Admin Panel view
-  if (isAdminRoute || showAdmin) {
+  // 1. Admin Panel view - Strictly accessible only via /admin route
+  if (isAdminRoute) {
     return (
       <AdminPanel
         settings={settings}
         onClose={() => {
-          if (isAdminRoute) {
-            navigateTo('/', '');
-          }
-          setShowAdmin(false);
+          navigateTo('/', '');
         }}
       />
     );
@@ -88,7 +85,7 @@ export default function App() {
       <div className="h-screen max-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-100 overflow-hidden">
         <div className="w-12 h-12 rounded-full border-4 border-cyan-500 border-t-transparent animate-spin mb-4" />
         <div className="font-mono text-cyan-400 text-sm tracking-widest uppercase">
-          CONNECTING TO PACKET MASH NETWORK...
+          CONNECTING TO RANSOMWARE RESCUE NETWORK...
         </div>
       </div>
     );
@@ -97,14 +94,14 @@ export default function App() {
   // 2. Mobile Controller View (On player's mobile phone)
   if (isController && charParam && CHARACTERS[charParam]) {
     return (
-      <div className="relative min-h-screen bg-slate-950">
+      <div className="relative h-screen max-h-screen bg-slate-950 overflow-hidden">
         {/* Floating audio toggle */}
         <button
           onClick={toggleSound}
-          className="fixed top-3 right-3 z-50 p-2 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-cyan-400 transition-colors"
+          className="fixed top-2.5 right-2.5 z-50 p-1.5 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-cyan-400 transition-colors"
           title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
         >
-          {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
+          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400" />}
         </button>
 
         <MobileControllerView
@@ -120,7 +117,7 @@ export default function App() {
   // 3. Shared Main Host Display View (Completely non-scrollable, fits in viewport)
   return (
     <div className="relative h-screen max-h-screen w-full bg-slate-950 flex flex-col justify-between overflow-hidden select-none">
-      {/* Top Floating Utility Controls for Host */}
+      {/* Top Floating Sound Toggle for Host */}
       <div className="fixed top-3 right-3 z-40 flex items-center gap-2">
         <button
           onClick={toggleSound}
@@ -137,7 +134,6 @@ export default function App() {
           <LobbyPhase
             liveRace={liveRace}
             settings={settings}
-            onOpenAdmin={() => setShowAdmin(true)}
           />
         )}
 
@@ -146,7 +142,6 @@ export default function App() {
           <RaceTrack
             liveRace={liveRace}
             settings={settings}
-            onOpenAdmin={() => setShowAdmin(true)}
           />
         )}
 
@@ -154,7 +149,7 @@ export default function App() {
           <PodiumPhase
             liveRace={liveRace}
             settings={settings}
-            onOpenAdmin={() => setShowAdmin(true)}
+            onOpenAdmin={() => navigateTo('/admin')}
           />
         )}
       </main>

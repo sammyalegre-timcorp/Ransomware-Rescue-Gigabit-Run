@@ -87,6 +87,19 @@ export async function updateGameSettings(settings: Partial<GameSettings>): Promi
       },
       { merge: true }
     );
+
+    // CRITICAL: Synchronize the new targetTaps & settings immediately to the active live race!
+    const liveRef = doc(db, 'live_race', 'current');
+    const liveUpdate: Record<string, any> = {
+      updatedAt: new Date().toISOString()
+    };
+    if (settings.requiredTaps !== undefined) {
+      liveUpdate.targetTaps = Number(settings.requiredTaps);
+    }
+    if (settings.countdownDuration !== undefined) {
+      liveUpdate.countdownRemaining = Number(settings.countdownDuration);
+    }
+    await updateDoc(liveRef, liveUpdate).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, SETTINGS_DOC_PATH);
   }
@@ -99,15 +112,26 @@ export function subscribeLiveRace(
   const ref = doc(db, 'live_race', 'current');
   return onSnapshot(
     ref,
-    (snapshot) => {
+    async (snapshot) => {
       if (snapshot.exists()) {
         onUpdate(snapshot.data() as LiveRaceDoc);
       } else {
+        // Fetch current settings to avoid fallback to default 1000
+        const settingsRef = doc(db, 'game_settings', 'config');
+        const settingsSnap = await getDoc(settingsRef).catch(() => null);
+        let targetTaps = DEFAULT_SETTINGS.requiredTaps;
+        let countdownDuration = DEFAULT_SETTINGS.countdownDuration;
+        if (settingsSnap && settingsSnap.exists()) {
+          const s = settingsSnap.data() as GameSettings;
+          if (s.requiredTaps) targetTaps = Number(s.requiredTaps);
+          if (s.countdownDuration) countdownDuration = Number(s.countdownDuration);
+        }
+
         const initialRace: LiveRaceDoc = {
           raceId: `race_${Date.now()}`,
           status: 'lobby',
-          targetTaps: DEFAULT_SETTINGS.requiredTaps,
-          countdownRemaining: DEFAULT_SETTINGS.countdownDuration,
+          targetTaps,
+          countdownRemaining: countdownDuration,
           startedAt: 0,
           endedAt: 0,
           slots: createInitialSlots(),
@@ -141,36 +165,26 @@ export async function registerPlayer(
 
     await setDoc(regDocRef, record);
 
-    // Also update the live race slot for this character
+    // Update ONLY this specific character slot in the live race document
     const liveRef = doc(db, 'live_race', 'current');
-    const snap = await getDoc(liveRef);
-    if (snap.exists()) {
-      const data = snap.data() as LiveRaceDoc;
-      const slots = { ...data.slots };
-      slots[registration.characterId] = {
-        ...(slots[registration.characterId] || {
-          characterId: registration.characterId,
-          tapCount: 0,
-          lastTapAt: 0,
-          finished: false,
-          finishTime: 0,
-          finishRank: 0
-        }),
-        assigned: true,
-        playerId: regId,
-        playerName: registration.name,
-        playerCompany: registration.company,
-        playerPosition: registration.position,
-        playerEmail: registration.email,
-        playerContact: registration.contactNumber,
-        isReady: false
-      };
+    const charId = registration.characterId;
 
-      await updateDoc(liveRef, {
-        slots,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    await updateDoc(liveRef, {
+      [`slots.${charId}.assigned`]: true,
+      [`slots.${charId}.playerId`]: regId,
+      [`slots.${charId}.playerName`]: registration.name,
+      [`slots.${charId}.playerCompany`]: registration.company,
+      [`slots.${charId}.playerPosition`]: registration.position,
+      [`slots.${charId}.playerEmail`]: registration.email,
+      [`slots.${charId}.playerContact`]: registration.contactNumber,
+      [`slots.${charId}.isReady`]: false,
+      [`slots.${charId}.tapCount`]: 0,
+      [`slots.${charId}.lastTapAt`]: 0,
+      [`slots.${charId}.finished`]: false,
+      [`slots.${charId}.finishTime`]: 0,
+      [`slots.${charId}.finishRank`]: 0,
+      updatedAt: new Date().toISOString()
+    });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, REGISTRATIONS_COLLECTION);
   }
@@ -178,35 +192,26 @@ export async function registerPlayer(
 
 export async function joinSlotDirectly(
   characterId: CharacterId,
-  playerName: string = 'Racer'
+  playerName: string = 'Protocol'
 ): Promise<string> {
   try {
     const playerId = `player_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const liveRef = doc(db, 'live_race', 'current');
-    const snap = await getDoc(liveRef);
-    if (snap.exists()) {
-      const data = snap.data() as LiveRaceDoc;
-      const slots = { ...data.slots };
-      slots[characterId] = {
-        ...(slots[characterId] || {
-          characterId,
-          tapCount: 0,
-          lastTapAt: 0,
-          finished: false,
-          finishTime: 0,
-          finishRank: 0
-        }),
-        assigned: true,
-        playerId,
-        playerName: playerName || CHARACTERS[characterId].name,
-        playerCompany: 'Cyber Team',
-        isReady: false
-      };
-      await updateDoc(liveRef, {
-        slots,
-        updatedAt: new Date().toISOString()
-      });
-    }
+
+    await updateDoc(liveRef, {
+      [`slots.${characterId}.assigned`]: true,
+      [`slots.${characterId}.playerId`]: playerId,
+      [`slots.${characterId}.playerName`]: playerName || CHARACTERS[characterId].name,
+      [`slots.${characterId}.playerCompany`]: 'Enterprise Network',
+      [`slots.${characterId}.isReady`]: false,
+      [`slots.${characterId}.tapCount`]: 0,
+      [`slots.${characterId}.lastTapAt`]: 0,
+      [`slots.${characterId}.finished`]: false,
+      [`slots.${characterId}.finishTime`]: 0,
+      [`slots.${characterId}.finishRank`]: 0,
+      updatedAt: new Date().toISOString()
+    });
+
     return playerId;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, LIVE_RACE_PATH);
@@ -216,50 +221,54 @@ export async function joinSlotDirectly(
 export async function setPlayerReady(characterId: CharacterId, isReady: boolean): Promise<void> {
   try {
     const liveRef = doc(db, 'live_race', 'current');
-    const snap = await getDoc(liveRef);
-    if (snap.exists()) {
-      const data = snap.data() as LiveRaceDoc;
-      const slots = { ...data.slots };
-      if (slots[characterId]) {
-        slots[characterId].isReady = isReady;
-        await updateDoc(liveRef, {
-          slots,
-          updatedAt: new Date().toISOString()
-        });
-      }
-    }
+    await updateDoc(liveRef, {
+      [`slots.${characterId}.isReady`]: isReady,
+      updatedAt: new Date().toISOString()
+    });
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, LIVE_RACE_PATH);
   }
 }
 
-export async function startCountdown(countdownSeconds: number, targetTaps?: number): Promise<void> {
+export async function startCountdown(countdownSeconds?: number, targetTaps?: number): Promise<void> {
   try {
+    // ALWAYS fetch the latest configured requiredTaps from game_settings to respect admin changes!
+    const settingsRef = doc(db, 'game_settings', 'config');
+    const settingsSnap = await getDoc(settingsRef).catch(() => null);
+
+    let effectiveTarget = targetTaps || DEFAULT_SETTINGS.requiredTaps;
+    let effectiveCountdown = countdownSeconds || DEFAULT_SETTINGS.countdownDuration;
+
+    if (settingsSnap && settingsSnap.exists()) {
+      const s = settingsSnap.data() as GameSettings;
+      if (s.requiredTaps) effectiveTarget = Number(s.requiredTaps);
+      if (s.countdownDuration && !countdownSeconds) effectiveCountdown = Number(s.countdownDuration);
+    }
+
     const liveRef = doc(db, 'live_race', 'current');
     const snap = await getDoc(liveRef);
+
     if (snap.exists()) {
       const data = snap.data() as LiveRaceDoc;
-      // Reset taps for all slots
-      const slots = { ...data.slots };
-      for (const key of Object.keys(slots) as CharacterId[]) {
-        slots[key] = {
-          ...slots[key],
-          tapCount: 0,
-          lastTapAt: 0,
-          finished: false,
-          finishTime: 0,
-          finishRank: 0
-        };
-      }
-      await updateDoc(liveRef, {
+      const updates: Record<string, any> = {
         status: 'countdown',
-        countdownRemaining: countdownSeconds,
-        targetTaps: targetTaps || data.targetTaps || DEFAULT_SETTINGS.requiredTaps,
+        countdownRemaining: effectiveCountdown,
+        targetTaps: effectiveTarget,
         startedAt: 0,
         endedAt: 0,
-        slots,
         updatedAt: new Date().toISOString()
-      });
+      };
+
+      // Reset each slot's tap progress cleanly for the new race
+      for (const key of Object.keys(data.slots) as CharacterId[]) {
+        updates[`slots.${key}.tapCount`] = 0;
+        updates[`slots.${key}.lastTapAt`] = 0;
+        updates[`slots.${key}.finished`] = false;
+        updates[`slots.${key}.finishTime`] = 0;
+        updates[`slots.${key}.finishRank`] = 0;
+      }
+
+      await updateDoc(liveRef, updates);
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, LIVE_RACE_PATH);
@@ -280,76 +289,83 @@ export async function setRaceStatus(status: LiveRaceDoc['status'], extra?: Parti
 }
 
 // Player taps character button on mobile controller
+// CRITICAL FIX: Uses dot-notation fields to update ONLY this character's slot.
+// Progress is never overwritten or stolen by another player!
+// When tapping stops, progress stays in place (doesn't go back to starting line).
 export async function submitTapBatch(
   characterId: CharacterId,
   tapDelta: number,
   currentLiveRace: LiveRaceDoc
 ): Promise<void> {
   if (currentLiveRace.status !== 'racing') return;
-  const slot = currentLiveRace.slots[characterId];
-  if (!slot || slot.finished) return;
+  const currentSlot = currentLiveRace.slots[characterId];
+  if (!currentSlot || currentSlot.finished) return;
 
-  const newTapCount = slot.tapCount + tapDelta;
   const now = Date.now();
-  const isNowFinished = newTapCount >= currentLiveRace.targetTaps;
+  const liveRef = doc(db, 'live_race', 'current');
 
   try {
-    const liveRef = doc(db, 'live_race', 'current');
     const snap = await getDoc(liveRef);
     if (!snap.exists()) return;
 
     const data = snap.data() as LiveRaceDoc;
     if (data.status !== 'racing') return;
 
-    const slots = { ...data.slots };
-    const targetSlot = slots[characterId];
-    if (!targetSlot || targetSlot.finished) return;
+    const slot = data.slots[characterId];
+    if (!slot || slot.finished) return;
 
-    const actualNewTap = Math.min(targetSlot.tapCount + tapDelta, data.targetTaps);
-    const finishedNow = actualNewTap >= data.targetTaps;
+    // Use current race targetTaps
+    const targetTaps = data.targetTaps || DEFAULT_SETTINGS.requiredTaps;
+    const newTapCount = Math.min(slot.tapCount + tapDelta, targetTaps);
+    const finishedNow = newTapCount >= targetTaps;
 
-    let finishRank = targetSlot.finishRank;
-    let finishTime = targetSlot.finishTime;
+    let finishRank = slot.finishRank;
+    let finishTime = slot.finishTime;
 
-    if (finishedNow && !targetSlot.finished) {
-      // Calculate rank based on existing finishers
-      const finishedSlots = Object.values(slots).filter((s) => s.finished && s.characterId !== characterId);
+    if (finishedNow && !slot.finished) {
+      const finishedSlots = Object.values(data.slots).filter(
+        (s) => s.finished && s.characterId !== characterId
+      );
       finishRank = finishedSlots.length + 1;
       const raceStartTime = data.startedAt || now;
       finishTime = Math.max(1, now - raceStartTime);
     }
 
-    slots[characterId] = {
-      ...targetSlot,
-      tapCount: actualNewTap,
+    // UPDATE ONLY THIS CHARACTER'S SLOT IN FIRESTORE
+    const updates: Record<string, any> = {
+      [`slots.${characterId}.tapCount`]: newTapCount,
+      [`slots.${characterId}.lastTapAt`]: now,
+      [`slots.${characterId}.finished`]: finishedNow,
+      [`slots.${characterId}.finishRank`]: finishRank,
+      [`slots.${characterId}.finishTime`]: finishTime,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Check if all assigned active players have completed the race
+    const updatedSlots = { ...data.slots };
+    updatedSlots[characterId] = {
+      ...slot,
+      tapCount: newTapCount,
       lastTapAt: now,
       finished: finishedNow,
       finishRank,
       finishTime
     };
 
-    // Check if race should finish
-    // A race finishes when all assigned active players have finished,
-    // or when the 1st place finishes and others stop, or when all 4 slots are done.
-    const assignedSlots = Object.values(slots).filter((s) => s.assigned);
+    const assignedSlots = Object.values(updatedSlots).filter((s) => s.assigned);
     const allAssignedFinished =
       assignedSlots.length > 0 && assignedSlots.every((s) => s.finished);
 
-    const updatePayload: Partial<LiveRaceDoc> = {
-      slots,
-      updatedAt: new Date().toISOString()
-    };
-
     if (allAssignedFinished) {
-      updatePayload.status = 'podium';
-      updatePayload.endedAt = now;
+      updates.status = 'podium';
+      updates.endedAt = now;
     }
 
-    await updateDoc(liveRef, updatePayload);
+    await updateDoc(liveRef, updates);
 
-    // If all finished, archive to race_history
+    // Archive race history when all finish
     if (allAssignedFinished) {
-      await archiveRaceHistory(data.raceId, slots, data.targetTaps);
+      await archiveRaceHistory(data.raceId, updatedSlots, targetTaps);
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, LIVE_RACE_PATH);
@@ -387,7 +403,7 @@ export async function archiveRaceHistory(
       raceId,
       date: new Date().toLocaleString(),
       targetTaps,
-      title: 'Gigabit Circuit Run',
+      title: 'Ransomware Rescue: Gigabit Run',
       winners,
       createdAt: new Date().toISOString()
     };
@@ -400,6 +416,19 @@ export async function archiveRaceHistory(
 
 export async function resetRaceLobby(keepPlayers: boolean = false): Promise<void> {
   try {
+    // Read current settings to use configured target taps
+    const settingsRef = doc(db, 'game_settings', 'config');
+    const settingsSnap = await getDoc(settingsRef).catch(() => null);
+
+    let targetTaps = DEFAULT_SETTINGS.requiredTaps;
+    let countdownDuration = DEFAULT_SETTINGS.countdownDuration;
+
+    if (settingsSnap && settingsSnap.exists()) {
+      const s = settingsSnap.data() as GameSettings;
+      if (s.requiredTaps) targetTaps = Number(s.requiredTaps);
+      if (s.countdownDuration) countdownDuration = Number(s.countdownDuration);
+    }
+
     const liveRef = doc(db, 'live_race', 'current');
     const snap = await getDoc(liveRef);
     let slots = createInitialSlots();
@@ -423,8 +452,8 @@ export async function resetRaceLobby(keepPlayers: boolean = false): Promise<void
     const newRace: LiveRaceDoc = {
       raceId: `race_${Date.now()}`,
       status: 'lobby',
-      targetTaps: DEFAULT_SETTINGS.requiredTaps,
-      countdownRemaining: DEFAULT_SETTINGS.countdownDuration,
+      targetTaps,
+      countdownRemaining: countdownDuration,
       startedAt: 0,
       endedAt: 0,
       slots,
@@ -440,31 +469,22 @@ export async function resetRaceLobby(keepPlayers: boolean = false): Promise<void
 export async function clearSlot(characterId: CharacterId): Promise<void> {
   try {
     const liveRef = doc(db, 'live_race', 'current');
-    const snap = await getDoc(liveRef);
-    if (snap.exists()) {
-      const data = snap.data() as LiveRaceDoc;
-      const slots = { ...data.slots };
-      slots[characterId] = {
-        characterId,
-        assigned: false,
-        playerId: '',
-        playerName: '',
-        playerCompany: '',
-        playerPosition: '',
-        playerEmail: '',
-        playerContact: '',
-        isReady: false,
-        tapCount: 0,
-        lastTapAt: 0,
-        finished: false,
-        finishTime: 0,
-        finishRank: 0
-      };
-      await updateDoc(liveRef, {
-        slots,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    await updateDoc(liveRef, {
+      [`slots.${characterId}.assigned`]: false,
+      [`slots.${characterId}.playerId`]: '',
+      [`slots.${characterId}.playerName`]: '',
+      [`slots.${characterId}.playerCompany`]: '',
+      [`slots.${characterId}.playerPosition`]: '',
+      [`slots.${characterId}.playerEmail`]: '',
+      [`slots.${characterId}.playerContact`]: '',
+      [`slots.${characterId}.isReady`]: false,
+      [`slots.${characterId}.tapCount`]: 0,
+      [`slots.${characterId}.lastTapAt`]: 0,
+      [`slots.${characterId}.finished`]: false,
+      [`slots.${characterId}.finishTime`]: 0,
+      [`slots.${characterId}.finishRank`]: 0,
+      updatedAt: new Date().toISOString()
+    });
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, LIVE_RACE_PATH);
   }

@@ -50,6 +50,7 @@ export interface GameSettings {
   requiredTaps: number;
   countdownDuration: number;
   gameTitle: string;
+  showTelemetryOnTrack: boolean;
   updatedAt?: string;
 }
 

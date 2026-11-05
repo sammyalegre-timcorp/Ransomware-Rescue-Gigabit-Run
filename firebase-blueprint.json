@@ -21,6 +21,10 @@
           "type": "string",
           "description": "Active title of the game"
         },
+        "showTelemetryOnTrack": {
+          "type": "boolean",
+          "description": "Option to show numerical mbps/progress/taps made or just show character move"
+        },
         "updatedAt": {
           "type": "string",
           "description": "ISO timestamp of last setting change"

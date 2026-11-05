@@ -21,7 +21,10 @@ import {
   Check,
   Trophy,
   History,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  EyeOff,
+  Wifi
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -37,6 +40,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
   const [requiredTaps, setRequiredTaps] = useState(settings.requiredTaps);
   const [countdownDuration, setCountdownDuration] = useState(settings.countdownDuration);
   const [gameTitle, setGameTitle] = useState(settings.gameTitle);
+  const [showTelemetryOnTrack, setShowTelemetryOnTrack] = useState(settings.showTelemetryOnTrack ?? false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -62,7 +66,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       registrationEnabled,
       requiredTaps: Number(requiredTaps),
       countdownDuration: Number(countdownDuration),
-      gameTitle
+      gameTitle,
+      showTelemetryOnTrack
     });
     setIsSaving(false);
     setSaveSuccess(true);
@@ -92,7 +97,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       return;
     }
 
-    const headers = ['Name', 'Company', 'Contact Number', 'Position', 'Email', 'Assigned Character', 'Registered Date'];
+    const headers = ['Name', 'Company', 'Contact Number', 'Position', 'Email', 'Assigned Protocol', 'Registered Date'];
     const rows = registrations.map((r) => [
       `"${r.name.replace(/"/g, '""')}"`,
       `"${r.company.replace(/"/g, '""')}"`,
@@ -107,7 +112,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `packet_dash_registrations_${Date.now()}.csv`);
+    link.setAttribute('download', `ransomware_rescue_registrations_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -121,7 +126,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       return;
     }
 
-    const headers = ['Date', 'Title', 'Target Taps', 'Rank', 'Player Name', 'Company', 'Character', 'Finish Time (s)', 'Taps'];
+    const headers = ['Date', 'Title', 'Patch Size (MB)', 'Rank', 'Player Name', 'Company', 'Protocol', 'Finish Time (s)', 'MB Transferred'];
     const rows: string[] = [];
 
     raceHistory.forEach((h) => {
@@ -144,7 +149,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `packet_dash_race_history_${Date.now()}.csv`);
+    link.setAttribute('download', `ransomware_rescue_history_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -160,38 +165,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col p-4 md:p-8">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col p-4 md:p-6 overflow-y-auto">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
               soundEngine.playClick();
               onClose();
             }}
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Game Display
           </button>
           <div>
-            <h1 className="text-2xl md:text-3xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch']">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-cyan-400 font-bold flex items-center gap-1">
+                <Wifi className="w-3.5 h-3.5" />
+                Presented by TIM
+              </span>
+              <span className="text-slate-700">|</span>
+              <span className="text-xs font-mono text-slate-400">Restricted Route: /admin</span>
+            </div>
+            <h1 className="text-xl md:text-2xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch']">
               COMMAND CENTER // /admin
             </h1>
-            <p className="text-xs text-slate-400 font-mono">
-              Live Configuration, Telemetry, and Player Registration Management
-            </p>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => {
               soundEngine.playClick();
               setActiveTab('settings');
             }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
               activeTab === 'settings'
                 ? 'bg-cyan-500 text-slate-950 shadow-md'
                 : 'text-slate-400 hover:text-slate-200'
@@ -205,7 +215,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
               soundEngine.playClick();
               setActiveTab('registrations');
             }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
               activeTab === 'registrations'
                 ? 'bg-cyan-500 text-slate-950 shadow-md'
                 : 'text-slate-400 hover:text-slate-200'
@@ -219,37 +229,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
               soundEngine.playClick();
               setActiveTab('history');
             }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
               activeTab === 'history'
                 ? 'bg-cyan-500 text-slate-950 shadow-md'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <History className="w-4 h-4" />
-            Race History ({raceHistory.length})
+            History ({raceHistory.length})
           </button>
         </div>
       </div>
 
       {/* TAB 1: Game Settings */}
       {activeTab === 'settings' && (
-        <div className="max-w-3xl space-y-6">
-          <form onSubmit={handleSaveSettings} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div className="max-w-3xl space-y-5">
+          <form onSubmit={handleSaveSettings} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-5">
+            {/* 1. Registration Mandatory Toggle */}
             <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-lg font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                <Settings className="w-4 h-4 text-cyan-400" />
                 1. Player Registration Mandatory Toggle
               </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Controls whether players must fill out their contact and company details upon scanning the QR code.
+              <p className="text-xs text-slate-400 mt-0.5">
+                Controls whether players must fill out company and contact info upon scanning QR code.
               </p>
 
-              <div className="mt-4 flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <div className="mt-3 flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800">
                 <div>
-                  <div className="font-bold text-sm text-slate-200">
+                  <div className="font-bold text-xs text-slate-200">
                     Mandatory Mobile Registration
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-[11px] text-slate-400">
                     {registrationEnabled
                       ? 'ON: Players fill Name, Company, Contact, Position, Email before playing.'
                       : 'OFF: QR code skips form and goes straight to "Are you ready?"'}
@@ -258,53 +269,83 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                 <button
                   type="button"
                   onClick={() => setRegistrationEnabled(!registrationEnabled)}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
+                  className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
                     registrationEnabled ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
                   }`}
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-950 shadow-md" />
+                  <span className="w-5 h-5 rounded-full bg-slate-950 shadow-md" />
                 </button>
               </div>
             </div>
 
-            {/* Game Title Options */}
+            {/* 2. Track Telemetry Toggle (Show Mbps/Progress vs Just show character move) */}
             <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-lg font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2 mb-2">
-                2. Active Game Title Option
+              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                {showTelemetryOnTrack ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4 text-slate-400" />}
+                2. Live Track Telemetry (Show Mbps/Progress vs Just Show Character Move)
               </h2>
-              <p className="text-xs text-slate-400 mb-3">
-                Select your preferred branding title for this game instance:
+              <p className="text-xs text-slate-400 mt-0.5">
+                Customize whether the main display lanes display numerical Mbps, progress %, and transferred MB numbers, or simply show the character move down the track.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+              <div className="mt-3 flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800">
+                <div>
+                  <div className="font-bold text-xs text-slate-200">
+                    {showTelemetryOnTrack ? 'Show Numerical Mbps & Progress' : 'Clean View (Just Show Character Move)'}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {showTelemetryOnTrack
+                      ? 'ON: Live MB transferred, progress %, and speed indicators are shown on each lane.'
+                      : 'OFF: Only the physical character and their running steps are shown on the track.'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTelemetryOnTrack(!showTelemetryOnTrack)}
+                  className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
+                    showTelemetryOnTrack ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
+                  }`}
+                >
+                  <span className="w-5 h-5 rounded-full bg-slate-950 shadow-md" />
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Game Title Selection */}
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2 mb-1.5">
+                3. Active Game Title
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 {TITLE_OPTIONS.map((title) => (
                   <div
                     key={title}
                     onClick={() => setGameTitle(title)}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
                       gameTitle === title
                         ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
                         : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
-                    <div className="flex items-center justify-between font-bold text-sm font-['Chakra_Petch']">
+                    <div className="flex items-center justify-between font-bold text-xs font-['Chakra_Petch']">
                       <span>{title}</span>
-                      {gameTitle === title && <Check className="w-4 h-4 text-cyan-400" />}
+                      {gameTitle === title && <Check className="w-3.5 h-3.5 text-cyan-400" />}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Tap Count & Countdown duration */}
+            {/* 4. Patch Size (MB / Clicks) & Countdown duration */}
             <div className="space-y-4">
-              <h2 className="text-lg font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
-                3. Race Physics & Track Calibration
+              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                4. Emergency Patch Size (MB / Clicks) & Prep Time
               </h2>
 
               <div>
                 <div className="flex justify-between items-center mb-1 text-xs font-mono">
-                  <span className="text-slate-300 font-bold">Required Taps to Finish Line</span>
-                  <span className="text-cyan-400 font-bold text-sm">{requiredTaps.toLocaleString()} Taps</span>
+                  <span className="text-slate-300 font-bold">Emergency Patch Size (MB to Transfer)</span>
+                  <span className="text-cyan-400 font-bold text-sm">{requiredTaps.toLocaleString()} MB</span>
                 </div>
                 <input
                   type="range"
@@ -316,16 +357,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                   className="w-full accent-cyan-400 cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
-                  <span>100 (Sprint Demo)</span>
-                  <span>500 (Medium)</span>
-                  <span>1,000 (Standard Spec)</span>
-                  <span>2,000 (Endurance)</span>
+                  <span>100 MB (Fast)</span>
+                  <span>500 MB (Medium)</span>
+                  <span>1,000 MB (Standard 1TB Patch)</span>
+                  <span>2,000 MB (Endurance)</span>
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1 text-xs font-mono">
-                  <span className="text-slate-300 font-bold">Start Countdown Duration</span>
+                  <span className="text-slate-300 font-bold">Countdown Prep Duration</span>
                   <span className="text-amber-400 font-bold text-sm">{countdownDuration} Seconds</span>
                 </div>
                 <input
@@ -338,19 +379,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                   className="w-full accent-amber-400 cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
-                  <span>3s (Quick)</span>
+                  <span>3s (Fast)</span>
                   <span>5s (Standard)</span>
-                  <span>10s (Long Prep)</span>
+                  <span>10s (Long)</span>
                 </div>
               </div>
             </div>
 
             {/* Save Buttons */}
-            <div className="flex items-center gap-4 pt-3">
+            <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-6 py-3 rounded-xl font-bold font-['Chakra_Petch'] text-sm tracking-wide bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 flex items-center gap-2 cursor-pointer transition-all shadow-md active:scale-95"
+                className="px-5 py-2.5 rounded-xl font-bold font-['Chakra_Petch'] text-xs md:text-sm tracking-wide bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 flex items-center gap-1.5 cursor-pointer transition-all shadow-md active:scale-95"
               >
                 {saveSuccess ? (
                   <>
@@ -368,9 +409,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
               <button
                 type="button"
                 onClick={handleResetLobby}
-                className="px-4 py-3 rounded-xl bg-slate-950 border border-red-500/40 hover:bg-red-500/10 text-red-400 text-xs font-mono flex items-center gap-2 cursor-pointer transition-colors"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-red-500/40 hover:bg-red-500/10 text-red-400 text-xs font-mono flex items-center gap-1.5 cursor-pointer transition-colors"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-3.5 h-3.5" />
                 Force Reset Race Lobby
               </button>
             </div>
@@ -381,15 +422,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       {/* TAB 2: Player Registrations */}
       {activeTab === 'registrations' && (
         <div className="space-y-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
             <div className="relative w-full md:w-80">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search by name, company, email..."
+                placeholder="Search registrations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -399,34 +440,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
               </span>
               <button
                 onClick={handleExportRegistrationsCSV}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold font-['Chakra_Petch'] text-xs cursor-pointer shadow-md transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold font-['Chakra_Petch'] text-xs cursor-pointer shadow-md transition-all active:scale-95"
               >
-                <FileSpreadsheet className="w-4 h-4" />
-                Export CSV / Excel
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Export CSV
               </button>
             </div>
           </div>
 
-          {/* Registrations Table */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-x-auto shadow-xl">
+          {/* Table */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-x-auto shadow-xl">
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800">
                 <tr>
-                  <th className="p-3.5">Name</th>
-                  <th className="p-3.5">Company</th>
-                  <th className="p-3.5">Position</th>
-                  <th className="p-3.5">Email</th>
-                  <th className="p-3.5">Contact</th>
-                  <th className="p-3.5">Character</th>
-                  <th className="p-3.5">Date</th>
-                  <th className="p-3.5 text-right">Actions</th>
+                  <th className="p-3">Name</th>
+                  <th className="p-3">Company</th>
+                  <th className="p-3">Position</th>
+                  <th className="p-3">Email</th>
+                  <th className="p-3">Contact</th>
+                  <th className="p-3">Protocol</th>
+                  <th className="p-3">Date</th>
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {filteredRegistrations.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">
-                      No player registration records found. Scan a character QR code to register!
+                    <td colSpan={8} className="p-6 text-center text-slate-500">
+                      No player registration records found.
                     </td>
                   </tr>
                 ) : (
@@ -434,12 +475,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                     const char = CHARACTERS[r.characterId];
                     return (
                       <tr key={r.id || r.playerId} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="p-3.5 font-bold text-slate-100">{r.name}</td>
-                        <td className="p-3.5 text-cyan-400">{r.company || '—'}</td>
-                        <td className="p-3.5 text-slate-300">{r.position || '—'}</td>
-                        <td className="p-3.5 text-slate-300">{r.email}</td>
-                        <td className="p-3.5 text-slate-400">{r.contactNumber || '—'}</td>
-                        <td className="p-3.5">
+                        <td className="p-3 font-bold text-slate-100">{r.name}</td>
+                        <td className="p-3 text-cyan-400">{r.company || '—'}</td>
+                        <td className="p-3 text-slate-300">{r.position || '—'}</td>
+                        <td className="p-3 text-slate-300">{r.email}</td>
+                        <td className="p-3 text-slate-400">{r.contactNumber || '—'}</td>
+                        <td className="p-3">
                           <span
                             className="px-2 py-0.5 rounded text-[10px] font-bold"
                             style={{
@@ -450,10 +491,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                             {char?.name || r.characterId}
                           </span>
                         </td>
-                        <td className="p-3.5 text-slate-500 text-[11px]">
+                        <td className="p-3 text-slate-500 text-[10px]">
                           {new Date(r.createdAt).toLocaleString()}
                         </td>
-                        <td className="p-3.5 text-right">
+                        <td className="p-3 text-right">
                           <button
                             onClick={() => handleDeleteReg(r.id)}
                             className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
@@ -475,53 +516,53 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       {/* TAB 3: Race History */}
       {activeTab === 'history' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
             <div>
-              <h3 className="text-sm font-bold font-['Chakra_Petch'] text-slate-200">
-                Archived Race Sessions & Podium Winners
+              <h3 className="text-xs font-bold font-['Chakra_Petch'] text-slate-200">
+                Archived Rescue Sessions & Winning Protocols
               </h3>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-[11px] text-slate-400 font-mono">
                 Past race statistics, winning times, and podium standings saved to Firebase.
               </p>
             </div>
             <button
               onClick={handleExportHistoryCSV}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold font-['Chakra_Petch'] text-xs cursor-pointer shadow-md transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold font-['Chakra_Petch'] text-xs cursor-pointer shadow-md transition-all active:scale-95"
             >
-              <Download className="w-4 h-4" />
-              Export Race History CSV
+              <Download className="w-3.5 h-3.5" />
+              Export History CSV
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {raceHistory.length === 0 ? (
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 font-mono text-sm">
-                No past race sessions recorded yet. Complete a race to see podium records here!
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 text-center text-slate-500 font-mono text-xs">
+                No past race sessions recorded yet.
               </div>
             ) : (
               raceHistory.map((hist) => (
                 <div
                   key={hist.id || hist.raceId}
-                  className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5"
+                  className="bg-slate-900/80 border border-slate-800 rounded-xl p-4"
                 >
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                    <div className="flex items-center gap-3">
-                      <Trophy className="w-5 h-5 text-amber-400" />
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-400" />
                       <div>
-                        <div className="font-bold text-sm font-['Chakra_Petch'] text-slate-200">
-                          {hist.title || 'Gigabit Circuit Run'} • {hist.targetTaps} Taps
+                        <div className="font-bold text-xs font-['Chakra_Petch'] text-slate-200">
+                          {hist.title || 'Gigabit Circuit Run'} • {hist.targetTaps} MB
                         </div>
-                        <div className="text-xs font-mono text-slate-400">{hist.date}</div>
+                        <div className="text-[10px] font-mono text-slate-400">{hist.date}</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Podium Finishers */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                     {hist.winners.map((winner) => (
                       <div
                         key={winner.rank}
-                        className={`p-3 rounded-xl border flex items-center gap-3 ${
+                        className={`p-2.5 rounded-lg border flex items-center gap-2.5 ${
                           winner.rank === 1
                             ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
                             : winner.rank === 2
@@ -529,14 +570,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                             : 'bg-amber-800/10 border-amber-800/30 text-amber-500'
                         }`}
                       >
-                        <div className="w-8 h-8 rounded-lg bg-slate-950 font-black font-['Chakra_Petch'] flex items-center justify-center text-base">
+                        <div className="w-7 h-7 rounded bg-slate-950 font-black font-['Chakra_Petch'] flex items-center justify-center text-sm">
                           #{winner.rank}
                         </div>
                         <div className="truncate">
                           <div className="font-bold text-xs truncate">{winner.name}</div>
                           <div className="text-[10px] text-slate-400 truncate">{winner.company}</div>
                           <div className="text-[10px] font-mono text-cyan-400">
-                            ⏱ {winner.finishTimeSeconds}s • {winner.tapCount} taps
+                            ⏱ {winner.finishTimeSeconds}s • {winner.tapCount} MB
                           </div>
                         </div>
                       </div>

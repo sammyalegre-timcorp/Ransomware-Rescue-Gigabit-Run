@@ -1,6 +1,6 @@
 {
-  "name": "Packet Dash: Overclocked",
-  "description": "Fast-paced IT, cybersecurity, and networking multiplayer button-masher. Race data packets across optical fiber tracks with live mobile web controllers.",
+  "name": "Ransomware Rescue: Gigabit Run",
+  "description": "A ransomware exploit has breached the network. 4 AI Security Protocols race to push an emergency patch to the core server. Tap rapidly to pump bandwidth (Mbps) and save the company.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

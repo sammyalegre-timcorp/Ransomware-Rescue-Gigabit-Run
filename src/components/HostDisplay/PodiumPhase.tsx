@@ -5,7 +5,7 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { resetRaceLobby, archiveRaceHistory } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { Trophy, Medal, RotateCcw, Users, ArrowRight, Shield } from 'lucide-react';
+import { Trophy, Medal, RotateCcw, Users, ArrowRight, Wifi } from 'lucide-react';
 
 interface PodiumPhaseProps {
   liveRace: LiveRaceDoc;
@@ -15,8 +15,7 @@ interface PodiumPhaseProps {
 
 export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
   liveRace,
-  settings,
-  onOpenAdmin
+  settings
 }) => {
   // Compute ordered winners from slots
   const winners: PodiumWinner[] = Object.values(liveRace.slots)
@@ -88,17 +87,24 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
       {/* Background radial glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-cyan-900/25 via-slate-950 to-slate-950 pointer-events-none" />
 
-      {/* Header - Compact */}
+      {/* Header with "Presented by TIM" */}
       <header className="relative z-10 text-center shrink-0 mb-1">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[11px] uppercase tracking-widest mb-1">
-          <Trophy className="w-3.5 h-3.5 text-amber-400" />
-          OFFICIAL VICTORY PODIUM
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold">
+            <Wifi className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span>Presented by TIM</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[11px] uppercase tracking-widest">
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            CORE SERVER SECURED
+          </div>
         </div>
+
         <h1 className="text-2xl md:text-4xl font-black italic tracking-wide bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 bg-clip-text text-transparent font-['Chakra_Petch']">
-          CHAMPIONS OF THE GIGABIT TRACK
+          CHAMPIONS OF THE GIGABIT RUN
         </h1>
         <p className="text-slate-400 font-mono text-xs mt-0.5">
-          {settings.gameTitle} • Race Completed ({liveRace.targetTaps || settings.requiredTaps} Taps)
+          {settings.gameTitle} • 1 Terabyte Emergency Patch Deployed ({liveRace.targetTaps || settings.requiredTaps} MB)
         </p>
       </header>
 
@@ -119,14 +125,14 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
               </h3>
               <p className="text-[10px] text-slate-400 font-mono truncate">{secondPlace.company}</p>
               <div className="text-[11px] font-mono text-cyan-400 mt-0.5">
-                ⏱ {secondPlace.finishTimeSeconds > 0 ? `${secondPlace.finishTimeSeconds}s` : 'DNF'} • {secondPlace.tapCount} taps
+                ⏱ {secondPlace.finishTimeSeconds > 0 ? `${secondPlace.finishTimeSeconds}s` : 'DNF'} • {secondPlace.tapCount} MB
               </div>
             </div>
             {/* Pedestal Block */}
             <div className="w-full h-32 md:h-38 bg-gradient-to-t from-slate-900 to-slate-800 border-t-4 border-slate-400 rounded-t-xl flex flex-col items-center justify-center p-2 shadow-[0_0_20px_rgba(148,163,184,0.2)]">
               <Medal className="w-8 h-8 text-slate-300 mb-0.5" />
               <span className="text-3xl md:text-4xl font-black font-['Chakra_Petch'] text-slate-300">2</span>
-              <span className="text-[10px] font-mono text-slate-400">SILVER</span>
+              <span className="text-[10px] font-mono text-slate-400">SILVER PROTOCOL</span>
             </div>
           </div>
         ) : (
@@ -138,7 +144,7 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
           <div className="flex-1 w-full flex flex-col items-center">
             <div className="mb-2 text-center shrink-0">
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-mono font-black bg-amber-400 text-slate-950 shadow-[0_0_15px_rgba(251,191,36,0.5)] mb-1 animate-bounce">
-                <Trophy className="w-3.5 h-3.5" /> 1ST PLACE CHAMPION
+                <Trophy className="w-3.5 h-3.5" /> 1ST PLACE // CORE SAVIOR
               </span>
               <div className="scale-105 my-0.5">
                 <CharacterAvatar characterId={firstPlace.characterId} size="lg" glow={true} />
@@ -148,7 +154,7 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
               </h2>
               <p className="text-xs text-slate-300 font-mono truncate">{firstPlace.company}</p>
               <div className="text-xs font-mono font-bold text-emerald-400 mt-0.5">
-                ⏱ {firstPlace.finishTimeSeconds}s • {firstPlace.tapCount} taps
+                ⏱ {firstPlace.finishTimeSeconds}s • {firstPlace.tapCount} MB Transferred
               </div>
             </div>
             {/* Pedestal Block */}
@@ -156,7 +162,7 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
               <Trophy className="w-10 h-10 text-amber-400 mb-1 animate-pulse" />
               <span className="text-4xl md:text-5xl font-black font-['Chakra_Petch'] text-amber-400">1</span>
               <span className="text-[11px] font-mono font-bold text-amber-300 uppercase tracking-wider">
-                GIGABIT OVERLORD
+                SERVER DEFENDER
               </span>
             </div>
           </div>
@@ -177,14 +183,14 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
               </h3>
               <p className="text-[10px] text-slate-400 font-mono truncate">{thirdPlace.company}</p>
               <div className="text-[11px] font-mono text-cyan-400 mt-0.5">
-                ⏱ {thirdPlace.finishTimeSeconds > 0 ? `${thirdPlace.finishTimeSeconds}s` : 'DNF'} • {thirdPlace.tapCount} taps
+                ⏱ {thirdPlace.finishTimeSeconds > 0 ? `${thirdPlace.finishTimeSeconds}s` : 'DNF'} • {thirdPlace.tapCount} MB
               </div>
             </div>
             {/* Pedestal Block */}
             <div className="w-full h-24 md:h-30 bg-gradient-to-t from-slate-900 to-slate-800 border-t-4 border-amber-700 rounded-t-xl flex flex-col items-center justify-center p-2 shadow-[0_0_15px_rgba(180,83,9,0.2)]">
               <Medal className="w-7 h-7 text-amber-600 mb-0.5" />
               <span className="text-2xl md:text-3xl font-black font-['Chakra_Petch'] text-amber-600">3</span>
-              <span className="text-[10px] font-mono text-amber-500">BRONZE</span>
+              <span className="text-[10px] font-mono text-amber-500">BRONZE PROTOCOL</span>
             </div>
           </div>
         ) : (
@@ -192,15 +198,12 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
         )}
       </div>
 
-      {/* Action Navigation Footer - Compact */}
+      {/* Action Navigation Footer - NO admin button */}
       <footer className="relative z-10 shrink-0 border-t border-slate-800 pt-2 flex items-center justify-between gap-4">
-        <button
-          onClick={onOpenAdmin}
-          className="text-xs font-mono text-slate-400 hover:text-cyan-400 flex items-center gap-1.5 cursor-pointer"
-        >
-          <Shield className="w-3.5 h-3.5 text-cyan-400" />
-          View Records in /admin →
-        </button>
+        <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
+          <Wifi className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Presented by TIM • Ransomware Exploit Neutralized</span>
+        </div>
 
         <div className="flex items-center gap-3">
           <button
@@ -208,14 +211,14 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
             className="px-4 py-2 rounded-xl bg-slate-900 border border-cyan-500 hover:bg-cyan-950/40 text-cyan-300 font-bold font-['Chakra_Petch'] text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md"
           >
             <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-            Rematch (Keep Players)
+            Rematch (Keep Protocols)
           </button>
           <button
             onClick={handleNewRaceLobby}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black font-['Chakra_Petch'] text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.4)]"
           >
             <Users className="w-3.5 h-3.5 text-slate-950" />
-            New Race (Reset Lobby)
+            New Match (Reset Lobby)
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

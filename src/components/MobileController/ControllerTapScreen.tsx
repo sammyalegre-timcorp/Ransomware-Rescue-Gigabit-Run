@@ -4,7 +4,7 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { submitTapBatch } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { Flame, Zap, Gauge, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Flame, Zap, AlertTriangle, Shield, Wifi } from 'lucide-react';
 
 interface ControllerTapScreenProps {
   characterId: CharacterId;
@@ -26,10 +26,10 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
   settings
 }) => {
   const char = CHARACTERS[characterId];
-  const targetTaps = liveRace.targetTaps || settings.requiredTaps || 1000;
+  const targetMB = settings.requiredTaps || liveRace.targetTaps || 1000;
   const slot = liveRace.slots[characterId];
 
-  // Local optimistic tap count for instant responsiveness
+  // Local optimistic tap/MB count for instant tactile response
   const [localTaps, setLocalTaps] = useState<number>(slot?.tapCount || 0);
   const [tapRate, setTapRate] = useState<number>(0);
   const [isPressing, setIsPressing] = useState<boolean>(false);
@@ -40,7 +40,15 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
   const lastSyncTimeRef = useRef<number>(Date.now());
   const buttonRef = useRef<HTMLDivElement>(null);
 
-  // Sync from server if server count is higher (e.g. reconnect)
+  // Reset to 0 only when a new lobby or countdown begins
+  useEffect(() => {
+    if (liveRace.status === 'lobby' || liveRace.status === 'countdown') {
+      setLocalTaps(0);
+      pendingDeltaRef.current = 0;
+    }
+  }, [liveRace.status]);
+
+  // Sync from server if server count is higher (e.g. initial connection)
   useEffect(() => {
     if (slot?.tapCount && slot.tapCount > localTaps) {
       setLocalTaps(slot.tapCount);
@@ -60,7 +68,7 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
     return () => clearInterval(syncInterval);
   }, [characterId, liveRace]);
 
-  // Calculate tap rate (taps per second) and clean up ripple effects
+  // Calculate tap rate (MB/s or taps/s)
   useEffect(() => {
     const rateInterval = setInterval(() => {
       const now = Date.now();
@@ -72,14 +80,14 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
   }, []);
 
   const handleTap = (clientX?: number, clientY?: number) => {
-    if (slot?.finished || localTaps >= targetTaps) return;
+    if (slot?.finished || localTaps >= targetMB) return;
 
     const now = Date.now();
     recentTapsRef.current.push(now);
     lastSyncTimeRef.current = now;
 
     // Increment local state immediately
-    setLocalTaps((prev) => Math.min(prev + 1, targetTaps));
+    setLocalTaps((prev) => Math.min(prev + 1, targetMB));
     pendingDeltaRef.current += 1;
 
     // Haptic feedback
@@ -96,76 +104,83 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
       const x = clientX - rect.left;
       const y = clientY - rect.top;
       const newEffect = { id: Date.now() + Math.random(), x, y };
-      setTapEffects((prev) => [...prev.slice(-4), newEffect]);
+      setTapEffects((prev) => [...prev.slice(-3), newEffect]);
     } else {
-      setTapEffects((prev) => [...prev.slice(-4), { id: Date.now(), x: 120, y: 120 }]);
+      setTapEffects((prev) => [...prev.slice(-3), { id: Date.now(), x: 96, y: 96 }]);
     }
   };
 
-  const progressPercent = Math.min(100, (localTaps / targetTaps) * 100);
-  const isStopped = tapRate === 0 && !slot?.finished && localTaps < targetTaps;
+  const progressPercent = Math.min(100, (localTaps / targetMB) * 100);
+  const isStopped = tapRate === 0 && !slot?.finished && localTaps < targetMB;
+  // Estimated pumped Mbps (e.g. 1 tap = 50 Mbps burst)
+  const pumpedMbps = tapRate > 0 ? tapRate * 48 : 0;
 
   return (
     <div
-      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 select-none touch-manipulation overflow-hidden max-w-md mx-auto"
+      className="h-screen max-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-3 select-none touch-manipulation overflow-hidden max-w-md mx-auto"
       style={{ touchAction: 'manipulation' }}
     >
-      {/* Top Controller HUD */}
-      <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center p-1">
+      {/* Top Header - Compact with "Presented by TIM" */}
+      <header className="shrink-0 flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center p-0.5 shrink-0">
             <CharacterAvatar characterId={characterId} size="sm" glow={false} />
           </div>
           <div>
-            <div className="text-sm font-black font-['Chakra_Petch'] text-slate-100 truncate max-w-[130px]">
-              {char.name}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black font-['Chakra_Petch'] text-slate-100 truncate max-w-[120px]">
+                {char.name}
+              </span>
+              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
+                TIM
+              </span>
             </div>
-            <div className="text-[10px] font-mono text-cyan-400 truncate max-w-[130px]">
-              {playerName || 'Pilot'}
+            <div className="text-[10px] font-mono text-cyan-400 truncate max-w-[120px]">
+              {playerName || 'Protocol Pilot'}
             </div>
           </div>
         </div>
 
         <div className="text-right">
-          <div className="text-lg font-mono font-black text-cyan-300">
+          <div className="text-sm font-mono font-black text-cyan-300">
             {localTaps.toLocaleString()}{' '}
-            <span className="text-xs text-slate-500 font-normal">/ {targetTaps}</span>
+            <span className="text-[10px] text-slate-500 font-normal">/ {targetMB} MB</span>
           </div>
           <div className="text-[10px] font-mono text-emerald-400 font-bold">
-            {progressPercent.toFixed(1)}% COMPLETE
+            {progressPercent.toFixed(1)}% PATCHED
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Dynamic Momentum Alert */}
-      <div className="my-2 text-center">
+      {/* Dynamic Bandwidth / Momentum Alert */}
+      <div className="shrink-0 my-1 text-center">
         {isStopped ? (
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-xs font-bold animate-pulse">
             <AlertTriangle className="w-3.5 h-3.5" />
-            HALTED! TAP RAPIDLY TO ACCELERATE
+            0 Mbps! TAP RAPIDLY TO PUMP BANDWIDTH
           </div>
         ) : (
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold">
             <Flame className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
-            SPEED: {tapRate} TAPS/SEC • OVERCLOCK ACTIVE
+            PUMPING {pumpedMbps} Mbps • OVERCLOCK ACTIVE
           </div>
         )}
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full bg-slate-900 rounded-full h-3 border border-slate-800 overflow-hidden relative">
+      <div className="shrink-0 w-full bg-slate-900 rounded-full h-2.5 border border-slate-800 overflow-hidden relative">
         <div
           className="h-full transition-all duration-75 ease-out rounded-full"
           style={{
             width: `${progressPercent}%`,
             background: `linear-gradient(to right, ${char.primaryColor}, ${char.accentColor})`,
-            boxShadow: `0 0 12px ${char.primaryColor}`
+            boxShadow: `0 0 10px ${char.primaryColor}`
           }}
         />
       </div>
 
-      {/* Giant Mobile Button Masher */}
-      <div className="my-auto flex flex-col items-center justify-center py-4">
+      {/* Giant Mobile Button Masher - Carefully Sized to ALWAYS fit on screen */}
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto py-2">
         <div
           ref={buttonRef}
           onTouchStart={(e) => {
@@ -183,15 +198,15 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
             handleTap(e.clientX, e.clientY);
           }}
           onMouseUp={() => setIsPressing(false)}
-          className={`relative w-64 h-64 md:w-72 md:h-72 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-75 transform active:scale-95 shadow-2xl ${
+          className={`relative w-48 h-48 sm:w-56 sm:h-56 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-75 transform active:scale-95 shadow-2xl overflow-hidden ${
             isPressing ? 'scale-95' : 'scale-100 hover:scale-[1.02]'
           }`}
           style={{
-            background: `radial-gradient(circle at 35% 35%, ${char.primaryColor}30, #090d16)`,
-            border: `6px solid ${char.primaryColor}`,
+            background: `radial-gradient(circle at 35% 35%, ${char.primaryColor}35, #080d1a)`,
+            border: `5px solid ${char.primaryColor}`,
             boxShadow: isPressing
-              ? `0 0 40px ${char.primaryColor}, inset 0 0 30px ${char.primaryColor}`
-              : `0 0 60px ${char.glowColor}`
+              ? `0 0 30px ${char.primaryColor}, inset 0 0 25px ${char.primaryColor}`
+              : `0 0 40px ${char.glowColor}`
           }}
         >
           {/* Circular Progress Ring */}
@@ -202,24 +217,30 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
               r="46%"
               fill="transparent"
               stroke={char.primaryColor}
-              strokeWidth="6"
+              strokeWidth="5"
               strokeDasharray="290"
               strokeDashoffset={290 - (290 * progressPercent) / 100}
               className="transition-all duration-75"
             />
           </svg>
 
-          {/* Character SVG Masher Logo */}
-          <div className="w-32 h-32 md:w-36 md:h-36 pointer-events-none transform transition-transform">
-            <CharacterAvatar characterId={characterId} size="giant" glow={true} />
+          {/* Character Avatar with Feet - INSIDE BUTTON & STEPPING! */}
+          <div className="pointer-events-none transform transition-transform scale-90 sm:scale-100">
+            <CharacterAvatar
+              characterId={characterId}
+              size="lg"
+              glow={true}
+              stepPhase={localTaps}
+              isMoving={!isStopped}
+            />
           </div>
 
-          <div className="mt-2 text-center pointer-events-none">
-            <span className="block text-xs font-mono font-black tracking-widest uppercase text-slate-300">
-              TAP RAPIDLY!
+          <div className="text-center pointer-events-none mt-0.5">
+            <span className="block text-[10px] sm:text-xs font-mono font-black tracking-widest uppercase text-slate-200">
+              TAP TO PUMP!
             </span>
             <span
-              className="text-xs font-mono font-bold"
+              className="text-[10px] font-mono font-bold"
               style={{ color: char.primaryColor }}
             >
               {char.cyberQuote}
@@ -230,24 +251,26 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
           {tapEffects.map((effect) => (
             <span
               key={effect.id}
-              className="absolute w-12 h-12 rounded-full border-2 border-white pointer-events-none animate-ping opacity-75"
+              className="absolute w-10 h-10 rounded-full border-2 border-white pointer-events-none animate-ping opacity-75"
               style={{
-                left: effect.x - 24,
-                top: effect.y - 24
+                left: effect.x - 20,
+                top: effect.y - 20
               }}
             />
           ))}
         </div>
       </div>
 
-      {/* Bottom Status / Instructions */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-center text-xs font-mono text-slate-400">
-        <div className="flex items-center justify-center gap-1.5 text-cyan-400 font-bold mb-0.5">
-          <Zap className="w-3.5 h-3.5" />
-          FAST TAPPING PROPELS FORWARD
+      {/* Bottom Footer - Non-scrollable with "Presented by TIM" */}
+      <footer className="shrink-0 bg-slate-900/80 border border-slate-800/80 rounded-xl px-3 py-1.5 text-center text-[10px] font-mono text-slate-400">
+        <div className="flex items-center justify-center gap-1.5 text-cyan-400 font-bold">
+          <Wifi className="w-3 h-3 text-cyan-400 animate-pulse" />
+          <span>Presented by TIM • Emergency Gigabit Link</span>
         </div>
-        <div>Continuous tapping keeps momentum active on the host display track.</div>
-      </div>
+        <div className="text-slate-500 text-[9px] mt-0.5">
+          Every tap steps forward & pumps Mbps to transfer the emergency patch!
+        </div>
+      </footer>
     </div>
   );
 };
