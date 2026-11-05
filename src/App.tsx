@@ -20,21 +20,27 @@ export default function App() {
   const [liveRace, setLiveRace] = useState<LiveRaceDoc | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // Parse URL query params and pathname to determine view
+  // Parse URL query params, pathname, and hash to determine view
   const [currentUrl, setCurrentUrl] = useState(() => ({
     pathname: window.location.pathname,
-    search: window.location.search
+    search: window.location.search,
+    hash: window.location.hash
   }));
 
   useEffect(() => {
     const handleLocationChange = () => {
       setCurrentUrl({
         pathname: window.location.pathname,
-        search: window.location.search
+        search: window.location.search,
+        hash: window.location.hash
       });
     };
     window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
   // Subscribe to live Firestore state
@@ -51,7 +57,10 @@ export default function App() {
   const isController = searchParams.get('role') === 'controller';
   const charParam = searchParams.get('char') as CharacterId | null;
   // The admin page should ONLY be accessible by adding '/admin' to the url
-  const isAdminRoute = currentUrl.pathname.includes('/admin') || searchParams.get('admin') === 'true';
+  const isAdminRoute =
+    currentUrl.pathname.toLowerCase().includes('/admin') ||
+    currentUrl.hash.toLowerCase().includes('admin') ||
+    searchParams.get('admin') === 'true';
 
   const toggleSound = () => {
     const next = !isMuted;
@@ -64,7 +73,7 @@ export default function App() {
 
   const navigateTo = (path: string, search: string = '') => {
     window.history.pushState({}, '', `${path}${search}`);
-    setCurrentUrl({ pathname: path, search });
+    setCurrentUrl({ pathname: path, search, hash: '' });
   };
 
   // 1. Admin Panel view - Strictly accessible only via /admin route

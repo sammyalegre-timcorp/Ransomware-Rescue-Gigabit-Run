@@ -37,11 +37,14 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
 
   // Generate QR code URLs for each character slot
   useEffect(() => {
-    const origin = window.location.origin;
-    const pathname = window.location.pathname;
+    // Clean base URL without trailing slash or index.html/admin paths
+    const rawBase = (import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
+      .replace(/\/admin.*$/, '')
+      .replace(/\/index\.html$/, '')
+      .replace(/\/+$/, '');
 
     charList.forEach(async (char) => {
-      const controllerUrl = `${origin}${pathname}?role=controller&char=${char.id}`;
+      const controllerUrl = `${rawBase}/?role=controller&char=${char.id}`;
       const dataUrl = await generateQrDataUrl(controllerUrl);
       setQrCodes((prev) => ({ ...prev, [char.id]: dataUrl }));
     });

@@ -24,7 +24,10 @@ import {
   FileSpreadsheet,
   Eye,
   EyeOff,
-  Wifi
+  Wifi,
+  AlertCircle,
+  X,
+  Globe
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -49,6 +52,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
   const [raceHistory, setRaceHistory] = useState<RaceHistoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // In-app feedback toast & confirmation modal (eliminates window.alert/window.confirm for iFrame and Vercel compatibility)
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: 'Confirm',
+    onConfirm: () => {}
+  });
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   useEffect(() => {
     const unsubReg = subscribeRegistrations(setRegistrations);
     const unsubHist = subscribeRaceHistory(setRaceHistory);
@@ -71,29 +96,48 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
     });
     setIsSaving(false);
     setSaveSuccess(true);
+    showToast('Settings saved & synced to active race successfully!');
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
-  const handleResetLobby = async () => {
-    if (confirm('Reset the active race and clear the lobby?')) {
-      soundEngine.playClick();
-      await resetRaceLobby(false);
-    }
+  const handleResetLobby = () => {
+    soundEngine.playClick();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reset Race Lobby?',
+      description: 'This will reset the active race session, clear assigned slots, and return all players to the standby lobby.',
+      confirmText: 'Yes, Reset Lobby',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        await resetRaceLobby(false);
+        showToast('Race lobby has been reset.');
+      }
+    });
   };
 
-  const handleDeleteReg = async (id?: string) => {
+  const handleDeleteReg = (id?: string) => {
     if (!id) return;
-    if (confirm('Delete this registration record?')) {
-      soundEngine.playClick();
-      await deleteRegistrationRecord(id);
-    }
+    soundEngine.playClick();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Registration Record?',
+      description: 'This will permanently remove this player registration record from Firebase Firestore.',
+      confirmText: 'Delete Record',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        await deleteRegistrationRecord(id);
+        showToast('Registration record deleted.');
+      }
+    });
   };
 
   // Export registrations to CSV
   const handleExportRegistrationsCSV = () => {
     soundEngine.playClick();
     if (registrations.length === 0) {
-      alert('No registration records available to export.');
+      showToast('No registration records available to export.');
       return;
     }
 
@@ -116,13 +160,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showToast(`Exported ${registrations.length} registrations to CSV.`);
   };
 
   // Export race history & podium winners to CSV
   const handleExportHistoryCSV = () => {
     soundEngine.playClick();
     if (raceHistory.length === 0) {
-      alert('No race history records available to export.');
+      showToast('No race history records available to export.');
       return;
     }
 
@@ -153,6 +198,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showToast(`Exported ${raceHistory.length} race sessions to CSV.`);
   };
 
   // Filtered registrations
@@ -416,6 +462,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
               </button>
             </div>
           </form>
+
+          {/* Vercel & Production Readiness Info */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-2">
+            <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs font-bold">
+              <Globe className="w-4 h-4" />
+              <span>VERCEL & DEPLOYMENT ARCHITECTURE</span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
+              • <strong>SPA Deep Routing:</strong> Configured with <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">vercel.json</code> rewrites so <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">/admin</code> and phone controllers load seamlessly without 404s.<br />
+              • <strong>Multiplayer Sync:</strong> Uses Google Cloud Firestore for real-time race telemetry. Player clicks never collide because each character slot syncs independently.<br />
+              • <strong>Custom Domain:</strong> Set <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">VITE_APP_URL</code> in Vercel environment variables if your QR codes should target a custom domain.
+            </p>
+          </div>
         </div>
       )}
 
@@ -586,6 +645,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification (Eliminates window.alert) */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900 border border-cyan-500 text-cyan-300 px-4 py-2.5 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.3)] font-mono text-xs">
+          <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span>{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="ml-2 text-slate-400 hover:text-white cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation Modal (Eliminates window.confirm) */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div
+                className={`p-2.5 rounded-xl ${
+                  confirmModal.danger
+                    ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                    : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                }`}
+              >
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold font-['Chakra_Petch'] text-slate-100">
+                  {confirmModal.title}
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-1">
+                  {confirmModal.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-mono cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className={`px-4 py-2 rounded-xl text-xs font-bold font-['Chakra_Petch'] cursor-pointer transition-all shadow-md ${
+                  confirmModal.danger
+                    ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                    : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                }`}
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
           </div>
         </div>
       )}
