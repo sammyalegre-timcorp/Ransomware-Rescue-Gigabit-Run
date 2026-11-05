@@ -1,0 +1,179 @@
+{
+  "entities": {
+    "GameSettings": {
+      "title": "GameSettings",
+      "description": "Global game rules, registration requirement, countdown duration, and target taps.",
+      "type": "object",
+      "properties": {
+        "registrationEnabled": {
+          "type": "boolean",
+          "description": "Whether player registration form is required before controller access"
+        },
+        "requiredTaps": {
+          "type": "number",
+          "description": "Number of taps needed to complete the race (default 1000)"
+        },
+        "countdownDuration": {
+          "type": "number",
+          "description": "Duration of race countdown in seconds (default 5)"
+        },
+        "gameTitle": {
+          "type": "string",
+          "description": "Active title of the game"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last setting change"
+        }
+      },
+      "required": ["registrationEnabled", "requiredTaps", "countdownDuration", "gameTitle"]
+    },
+    "PlayerRegistration": {
+      "title": "PlayerRegistration",
+      "description": "Player contact and corporate details collected from mobile registration.",
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string",
+          "description": "Unique identifier for player registration"
+        },
+        "characterId": {
+          "type": "string",
+          "description": "Selected character ID",
+          "enum": ["firewall_frank", "packet_pete", "cyber_kat", "agent_mal"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Player full name",
+          "maxLength": 100
+        },
+        "company": {
+          "type": "string",
+          "description": "Player organization or company",
+          "maxLength": 100
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "Player phone number",
+          "maxLength": 50
+        },
+        "position": {
+          "type": "string",
+          "description": "Player job title or position",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Player email address",
+          "maxLength": 150
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of submission"
+        }
+      },
+      "required": ["playerId", "characterId", "name", "email"]
+    },
+    "LiveRace": {
+      "title": "LiveRace",
+      "description": "Active multiplayer race synchronized in real-time across main display and mobile controllers.",
+      "type": "object",
+      "properties": {
+        "raceId": {
+          "type": "string",
+          "description": "Unique race session identifier"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the race",
+          "enum": ["lobby", "ready_check", "countdown", "racing", "podium"]
+        },
+        "countdownRemaining": {
+          "type": "number",
+          "description": "Remaining seconds during countdown phase"
+        },
+        "targetTaps": {
+          "type": "number",
+          "description": "Taps needed to win this race"
+        },
+        "startedAt": {
+          "type": "number",
+          "description": "Epoch timestamp in ms when race started"
+        },
+        "endedAt": {
+          "type": "number",
+          "description": "Epoch timestamp in ms when race concluded"
+        },
+        "winnerCharacterId": {
+          "type": "string",
+          "description": "Character ID of the 1st place champion"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of last state modification"
+        }
+      },
+      "required": ["raceId", "status", "targetTaps"]
+    },
+    "RaceHistory": {
+      "title": "RaceHistory",
+      "description": "Archived finished race results with podium finishers and timings.",
+      "type": "object",
+      "properties": {
+        "historyId": {
+          "type": "string",
+          "description": "Unique race history record ID"
+        },
+        "date": {
+          "type": "string",
+          "description": "Human readable date/time string"
+        },
+        "targetTaps": {
+          "type": "number",
+          "description": "Configured required taps"
+        },
+        "podium": {
+          "type": "string",
+          "description": "Serialized podium JSON summary"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of record creation"
+        }
+      },
+      "required": ["historyId", "targetTaps", "podium"]
+    }
+  },
+  "firestore": {
+    "/game_settings/{settingsId}": {
+      "schema": {
+        "$ref": "GameSettings"
+      },
+      "description": "Game settings documents configured via the /admin panel"
+    },
+    "/player_registrations/{registrationId}": {
+      "schema": {
+        "$ref": "PlayerRegistration"
+      },
+      "description": "Player registration logs stored from mobile controllers and exportable via /admin"
+    },
+    "/live_race/{raceId}": {
+      "schema": {
+        "$ref": "LiveRace"
+      },
+      "description": "Active real-time race state doc containing live tap counts and slot statuses"
+    },
+    "/live_race/{raceId}/slots/{characterId}": {
+      "schema": {
+        "$ref": "LiveRace"
+      },
+      "description": "Live per-character slot document tracking real-time taps and ready states"
+    },
+    "/race_history/{historyId}": {
+      "schema": {
+        "$ref": "RaceHistory"
+      },
+      "description": "Past race podium records and stats"
+    }
+  }
+}

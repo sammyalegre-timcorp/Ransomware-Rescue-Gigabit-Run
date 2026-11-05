@@ -1,0 +1,8 @@
+{
+  "name": "Packet Dash: Overclocked",
+  "description": "Fast-paced IT, cybersecurity, and networking multiplayer button-masher. Race data packets across optical fiber tracks with live mobile web controllers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Game settings collection
+    match /game_settings/{settingsId} {
+      allow get: if isValidId(settingsId);
+      allow list: if true;
+      allow write: if isValidId(settingsId);
+    }
+
+    // Player registration records
+    match /player_registrations/{registrationId} {
+      allow get: if isValidId(registrationId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(registrationId);
+    }
+
+    // Live race synchronization
+    match /live_race/{raceId} {
+      allow get: if isValidId(raceId);
+      allow list: if true;
+      allow write: if isValidId(raceId);
+
+      match /slots/{characterId} {
+        allow get: if isValidId(characterId);
+        allow list: if true;
+        allow write: if isValidId(characterId);
+      }
+    }
+
+    // Race history archives
+    match /race_history/{historyId} {
+      allow get: if isValidId(historyId);
+      allow list: if true;
+      allow write: if isValidId(historyId);
+    }
+  }
+}
