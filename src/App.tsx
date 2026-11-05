@@ -103,20 +103,13 @@ export default function App() {
   // 2. Mobile Controller View (On player's mobile phone)
   if (isController && charParam && CHARACTERS[charParam]) {
     return (
-      <div className="relative h-screen max-h-screen bg-slate-950 overflow-hidden">
-        {/* Floating audio toggle */}
-        <button
-          onClick={toggleSound}
-          className="fixed top-2.5 right-2.5 z-50 p-1.5 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 hover:text-cyan-400 transition-colors"
-          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-        >
-          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400" />}
-        </button>
-
+      <div className="relative h-dvh max-h-dvh w-full bg-slate-950 overflow-hidden">
         <MobileControllerView
           characterId={charParam}
           liveRace={liveRace}
           settings={settings}
+          isMuted={isMuted}
+          onToggleSound={toggleSound}
           onExitToHost={() => navigateTo('/', '')}
         />
       </div>

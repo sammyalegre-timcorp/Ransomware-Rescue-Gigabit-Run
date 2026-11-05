@@ -4,16 +4,20 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { registerPlayer } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { User, Building, Phone, Briefcase, Mail, ChevronRight, ShieldCheck, Wifi } from 'lucide-react';
+import { User, Building, Phone, Briefcase, Mail, ChevronRight, ShieldCheck, Wifi, Volume2, VolumeX } from 'lucide-react';
 
 interface RegistrationScreenProps {
   characterId: CharacterId;
   onRegistered: (name: string, company: string) => void;
+  isMuted?: boolean;
+  onToggleSound?: () => void;
 }
 
 export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({
   characterId,
-  onRegistered
+  onRegistered,
+  isMuted,
+  onToggleSound
 }) => {
   const char = CHARACTERS[characterId];
   const [formData, setFormData] = useState({
@@ -59,25 +63,36 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({
   };
 
   return (
-    <div className="h-screen max-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-3.5 select-none overflow-hidden max-w-md mx-auto">
-      {/* Top Branding Banner */}
-      <header className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
+    <div className="h-dvh max-h-dvh w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-2.5 sm:p-3.5 select-none overflow-y-auto max-w-md mx-auto">
+      {/* Top Branding Banner with Integrated Audio */}
+      <header className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2 bg-slate-900/60 px-2 py-1.5 rounded-xl">
         <div className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 font-bold">
           <Wifi className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
           <span>Presented by TIM</span>
         </div>
-        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] font-mono">
-          <ShieldCheck className="w-3 h-3" />
-          REGISTRATION
+        <div className="flex items-center gap-1.5">
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              className="p-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400 hover:text-cyan-400 cursor-pointer"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX className="w-3 h-3 text-red-400" /> : <Volume2 className="w-3 h-3 text-cyan-400" />}
+            </button>
+          )}
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] font-mono">
+            <ShieldCheck className="w-3 h-3" />
+            REGISTRATION
+          </div>
         </div>
       </header>
 
       {/* Character Identity */}
-      <div className="shrink-0 flex flex-col items-center text-center my-1">
-        <div className="scale-85">
+      <div className="shrink-0 flex flex-col items-center text-center my-0.5">
+        <div className="scale-75 sm:scale-85">
           <CharacterAvatar characterId={characterId} size="md" glow={true} />
         </div>
-        <h1 className="text-lg font-black italic tracking-wide font-['Chakra_Petch'] text-slate-100 mt-0.5">
+        <h1 className="text-base sm:text-lg font-black italic tracking-wide font-['Chakra_Petch'] text-slate-100 mt-0.5">
           {char.name}
         </h1>
         <p className="text-[10px] text-slate-400 max-w-xs">{char.specialty}</p>

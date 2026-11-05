@@ -4,13 +4,15 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { submitTapBatch } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { Flame, Zap, AlertTriangle, Shield, Wifi } from 'lucide-react';
+import { Flame, Zap, AlertTriangle, Shield, Wifi, Volume2, VolumeX } from 'lucide-react';
 
 interface ControllerTapScreenProps {
   characterId: CharacterId;
   playerName?: string;
   liveRace: LiveRaceDoc;
   settings: GameSettings;
+  isMuted?: boolean;
+  onToggleSound?: () => void;
 }
 
 interface TapEffect {
@@ -23,7 +25,9 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
   characterId,
   playerName,
   liveRace,
-  settings
+  settings,
+  isMuted,
+  onToggleSound
 }) => {
   const char = CHARACTERS[characterId];
   const targetMB = settings.requiredTaps || liveRace.targetTaps || 1000;
@@ -117,58 +121,69 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
 
   return (
     <div
-      className="h-screen max-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-3 select-none touch-manipulation overflow-hidden max-w-md mx-auto"
+      className="h-dvh max-h-dvh w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-2.5 sm:p-3 select-none touch-manipulation overflow-hidden max-w-md mx-auto"
       style={{ touchAction: 'manipulation' }}
     >
-      {/* Top Header - Compact with "Presented by TIM" */}
-      <header className="shrink-0 flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 backdrop-blur-md">
+      {/* Top Header - Compact with "Presented by TIM" & Audio Toggle */}
+      <header className="shrink-0 flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 backdrop-blur-md shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center p-0.5 shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center p-0.5 shrink-0">
             <CharacterAvatar characterId={characterId} size="sm" glow={false} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-black font-['Chakra_Petch'] text-slate-100 truncate max-w-[120px]">
+              <span className="text-xs font-black font-['Chakra_Petch'] text-slate-100 truncate max-w-[100px] sm:max-w-[120px]">
                 {char.name}
               </span>
-              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
+              <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
                 TIM
               </span>
             </div>
-            <div className="text-[10px] font-mono text-cyan-400 truncate max-w-[120px]">
+            <div className="text-[10px] font-mono text-cyan-400 truncate max-w-[100px] sm:max-w-[120px]">
               {playerName || 'Protocol Pilot'}
             </div>
           </div>
         </div>
 
-        <div className="text-right">
-          <div className="text-sm font-mono font-black text-cyan-300">
-            {localTaps.toLocaleString()}{' '}
-            <span className="text-[10px] text-slate-500 font-normal">/ {targetMB} MB</span>
-          </div>
-          <div className="text-[10px] font-mono text-emerald-400 font-bold">
-            {progressPercent.toFixed(1)}% PATCHED
+        <div className="flex items-center gap-2 text-right">
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              className="p-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400" />}
+            </button>
+          )}
+          <div>
+            <div className="text-xs sm:text-sm font-mono font-black text-cyan-300">
+              {localTaps.toLocaleString()}{' '}
+              <span className="text-[9px] text-slate-500 font-normal">/ {targetMB} MB</span>
+            </div>
+            <div className="text-[9px] sm:text-[10px] font-mono text-emerald-400 font-bold">
+              {progressPercent.toFixed(1)}% PATCHED
+            </div>
           </div>
         </div>
       </header>
 
       {/* Dynamic Bandwidth / Momentum Alert */}
-      <div className="shrink-0 my-1 text-center">
+      <div className="shrink-0 my-0.5 text-center">
         {isStopped ? (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-xs font-bold animate-pulse">
-            <AlertTriangle className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-[11px] font-bold animate-pulse">
+            <AlertTriangle className="w-3 h-3" />
             0 Mbps! TAP RAPIDLY TO PUMP BANDWIDTH
           </div>
         ) : (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold">
-            <Flame className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold">
+            <Flame className="w-3 h-3 text-amber-400 animate-bounce" />
             PUMPING {pumpedMbps} Mbps • OVERCLOCK ACTIVE
           </div>
         )}
       </div>
 
       {/* Progress Bar */}
-      <div className="shrink-0 w-full bg-slate-900 rounded-full h-2.5 border border-slate-800 overflow-hidden relative">
+      <div className="shrink-0 w-full bg-slate-900 rounded-full h-2 border border-slate-800 overflow-hidden relative">
         <div
           className="h-full transition-all duration-75 ease-out rounded-full"
           style={{
@@ -180,7 +195,7 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
       </div>
 
       {/* Giant Mobile Button Masher - Carefully Sized to ALWAYS fit on screen */}
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto py-2">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto py-1">
         <div
           ref={buttonRef}
           onTouchStart={(e) => {
@@ -198,7 +213,7 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
             handleTap(e.clientX, e.clientY);
           }}
           onMouseUp={() => setIsPressing(false)}
-          className={`relative w-48 h-48 sm:w-56 sm:h-56 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-75 transform active:scale-95 shadow-2xl overflow-hidden ${
+          className={`relative w-44 h-44 sm:w-52 sm:h-52 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-75 transform active:scale-95 shadow-2xl overflow-hidden ${
             isPressing ? 'scale-95' : 'scale-100 hover:scale-[1.02]'
           }`}
           style={{

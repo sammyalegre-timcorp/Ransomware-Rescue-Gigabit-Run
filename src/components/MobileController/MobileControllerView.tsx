@@ -14,6 +14,8 @@ interface MobileControllerViewProps {
   characterId: CharacterId;
   liveRace: LiveRaceDoc;
   settings: GameSettings;
+  isMuted?: boolean;
+  onToggleSound?: () => void;
   onExitToHost?: () => void;
 }
 
@@ -21,6 +23,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
   characterId,
   liveRace,
   settings,
+  isMuted,
+  onToggleSound,
   onExitToHost
 }) => {
   const slot = liveRace.slots[characterId];
@@ -80,6 +84,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
       <RegistrationScreen
         characterId={characterId}
         onRegistered={handleRegistrationComplete}
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
       />
     );
   }
@@ -87,11 +93,13 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
   // Phase 3a: Ready Check Modal ("Are you ready?")
   if (!slot?.isReady && liveRace.status === 'lobby') {
     return (
-      <div className="relative min-h-screen bg-slate-950 flex flex-col">
+      <div className="relative h-dvh max-h-dvh w-full bg-slate-950 flex flex-col overflow-hidden">
         <ReadyCheckModal
           characterId={characterId}
           playerName={playerName || slot?.playerName}
           onConfirmReady={handleConfirmReady}
+          isMuted={isMuted}
+          onToggleSound={onToggleSound}
         />
       </div>
     );
@@ -105,6 +113,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
         playerName={playerName || slot?.playerName}
         liveRace={liveRace}
         settings={settings}
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
       />
     );
   }
@@ -117,6 +127,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
         playerName={playerName || slot?.playerName}
         liveRace={liveRace}
         settings={settings}
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
       />
     );
   }
@@ -128,6 +140,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
         characterId={characterId}
         playerName={playerName || slot?.playerName}
         liveRace={liveRace}
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
       />
     );
   }
@@ -139,6 +153,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
       playerName={playerName || slot?.playerName}
       liveRace={liveRace}
       settings={settings}
+      isMuted={isMuted}
+      onToggleSound={onToggleSound}
     />
   );
 };
