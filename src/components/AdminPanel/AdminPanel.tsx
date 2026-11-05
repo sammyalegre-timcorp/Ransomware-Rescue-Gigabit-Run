@@ -211,10 +211,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col p-4 md:p-6 overflow-y-auto">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-5">
-        <div className="flex items-center gap-3">
+    <div className="h-screen max-h-screen w-full bg-slate-950 text-slate-100 flex flex-col p-3 sm:p-4 md:p-6 overflow-hidden select-none">
+      {/* Top Header - Fixed at top, never scrolls away */}
+      <header className="shrink-0 flex flex-col md:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-3 mb-3">
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <button
             onClick={() => {
               soundEngine.playClick();
@@ -234,14 +234,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
               <span className="text-slate-700">|</span>
               <span className="text-xs font-mono text-slate-400">Restricted Route: /admin</span>
             </div>
-            <h1 className="text-xl md:text-2xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch']">
+            <h1 className="text-lg md:text-2xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch']">
               COMMAND CENTER // /admin
             </h1>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 w-full md:w-auto justify-center">
           <button
             onClick={() => {
               soundEngine.playClick();
@@ -285,198 +285,245 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
             History ({raceHistory.length})
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* TAB 1: Game Settings */}
-      {activeTab === 'settings' && (
-        <div className="max-w-3xl space-y-5">
-          <form onSubmit={handleSaveSettings} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-5">
-            {/* 1. Registration Mandatory Toggle */}
-            <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
-                <Settings className="w-4 h-4 text-cyan-400" />
-                1. Player Registration Mandatory Toggle
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Controls whether players must fill out company and contact info upon scanning QR code.
-              </p>
+      {/* Main Content Area - Fully and reliably scrollable on any viewport */}
+      <main className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden pr-1 pb-6">
+        {/* TAB 1: Game Settings */}
+        {activeTab === 'settings' && (
+          <form onSubmit={handleSaveSettings} className="w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 items-start">
+              {/* LEFT COLUMN: Controls, Telemetry & Branding */}
+              <div className="space-y-4">
+                {/* 1. Registration Mandatory Toggle */}
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-lg">
+                  <h2 className="text-sm sm:text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-cyan-400" />
+                    1. Player Registration Mandatory Toggle
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Controls whether players must fill out company and contact info upon scanning QR code.
+                  </p>
 
-              <div className="mt-3 flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800">
-                <div>
-                  <div className="font-bold text-xs text-slate-200">
-                    Mandatory Mobile Registration
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    {registrationEnabled
-                      ? 'ON: Players fill Name, Company, Contact, Position, Email before playing.'
-                      : 'OFF: QR code skips form and goes straight to "Are you ready?"'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRegistrationEnabled(!registrationEnabled)}
-                  className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                    registrationEnabled ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
-                  }`}
-                >
-                  <span className="w-5 h-5 rounded-full bg-slate-950 shadow-md" />
-                </button>
-              </div>
-            </div>
-
-            {/* 2. Track Telemetry Toggle (Show Mbps/Progress vs Just show character move) */}
-            <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
-                {showTelemetryOnTrack ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4 text-slate-400" />}
-                2. Live Track Telemetry (Show Mbps/Progress vs Just Show Character Move)
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Customize whether the main display lanes display numerical Mbps, progress %, and transferred MB numbers, or simply show the character move down the track.
-              </p>
-
-              <div className="mt-3 flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800">
-                <div>
-                  <div className="font-bold text-xs text-slate-200">
-                    {showTelemetryOnTrack ? 'Show Numerical Mbps & Progress' : 'Clean View (Just Show Character Move)'}
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    {showTelemetryOnTrack
-                      ? 'ON: Live MB transferred, progress %, and speed indicators are shown on each lane.'
-                      : 'OFF: Only the physical character and their running steps are shown on the track.'}
+                  <div className="flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                    <div>
+                      <div className="font-bold text-xs text-slate-200">
+                        Mandatory Mobile Registration
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {registrationEnabled
+                          ? 'ON: Name, Company, Contact, Position, Email required.'
+                          : 'OFF: Skip registration form; jump straight to ready check.'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationEnabled(!registrationEnabled)}
+                      className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                        registrationEnabled ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
+                      }`}
+                    >
+                      <span className="w-5 h-5 rounded-full bg-slate-950 shadow-md" />
+                    </button>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTelemetryOnTrack(!showTelemetryOnTrack)}
-                  className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                    showTelemetryOnTrack ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
-                  }`}
-                >
-                  <span className="w-5 h-5 rounded-full bg-slate-950 shadow-md" />
-                </button>
-              </div>
-            </div>
 
-            {/* 3. Game Title Selection */}
-            <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2 mb-1.5">
-                3. Active Game Title
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {TITLE_OPTIONS.map((title) => (
-                  <div
-                    key={title}
-                    onClick={() => setGameTitle(title)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                      gameTitle === title
-                        ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-bold text-xs font-['Chakra_Petch']">
-                      <span>{title}</span>
-                      {gameTitle === title && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                {/* 2. Track Telemetry Toggle */}
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-lg">
+                  <h2 className="text-sm sm:text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                    {showTelemetryOnTrack ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4 text-slate-400" />}
+                    2. Live Track Telemetry Display
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Toggle between detailed Mbps & progress metrics vs clean track view.
+                  </p>
+
+                  <div className="flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800/80">
+                    <div>
+                      <div className="font-bold text-xs text-slate-200">
+                        {showTelemetryOnTrack ? 'Show Numerical Mbps & Progress' : 'Clean View (Just Show Character Move)'}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {showTelemetryOnTrack
+                          ? 'ON: Real-time MB transferred, % progress, and speed gauges shown on lanes.'
+                          : 'OFF: Minimalist track; only runner avatars and step strides are displayed.'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowTelemetryOnTrack(!showTelemetryOnTrack)}
+                      className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                        showTelemetryOnTrack ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
+                      }`}
+                    >
+                      <span className="w-5 h-5 rounded-full bg-slate-950 shadow-md" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Game Title Selection */}
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-lg">
+                  <h2 className="text-sm sm:text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                    3. Active Game Title
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {TITLE_OPTIONS.map((title) => (
+                      <div
+                        key={title}
+                        onClick={() => setGameTitle(title)}
+                        className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          gameTitle === title
+                            ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between font-bold text-xs font-['Chakra_Petch']">
+                          <span className="truncate pr-1">{title}</span>
+                          {gameTitle === title && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Patch Size, Prep Time, Presets & Actions */}
+              <div className="space-y-4">
+                {/* 4. Patch Size & Countdown Duration */}
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-lg">
+                  <h2 className="text-sm sm:text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-cyan-400" />
+                    4. Emergency Patch Size & Prep Time
+                  </h2>
+
+                  {/* Patch Size Slider & Quick Presets */}
+                  <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 space-y-2">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-slate-300 font-bold">Emergency Patch Size:</span>
+                      <span className="text-cyan-400 font-black text-sm tracking-wide bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/40">
+                        {Number(requiredTaps).toLocaleString()} MB
+                      </span>
+                    </div>
+
+                    {/* Quick preset buttons */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      {[100, 500, 1000, 2000].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setRequiredTaps(val)}
+                          className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                            requiredTaps === val
+                              ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          }`}
+                        >
+                          {val === 100 ? '100 MB' : val === 500 ? '500 MB' : val === 1000 ? '1,000 MB' : '2,000 MB'}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      type="range"
+                      min="100"
+                      max="2000"
+                      step="50"
+                      value={requiredTaps}
+                      onChange={(e) => setRequiredTaps(Number(e.target.value))}
+                      className="w-full accent-cyan-400 cursor-pointer mt-1"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-500">
+                      <span>100 MB (Fast)</span>
+                      <span>1,000 MB (Standard 1TB)</span>
+                      <span>2,000 MB (Endurance)</span>
                     </div>
                   </div>
-                ))}
+
+                  {/* Countdown duration Slider & Quick Presets */}
+                  <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 space-y-2">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-slate-300 font-bold">Countdown Prep Duration:</span>
+                      <span className="text-amber-400 font-black text-sm tracking-wide bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/40">
+                        {countdownDuration} Seconds
+                      </span>
+                    </div>
+
+                    {/* Quick preset buttons */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      {[3, 5, 10].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setCountdownDuration(val)}
+                          className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                            countdownDuration === val
+                              ? 'bg-amber-400 text-slate-950 shadow-sm'
+                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          }`}
+                        >
+                          {val}s {val === 5 ? '(Standard)' : ''}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      type="range"
+                      min="3"
+                      max="10"
+                      step="1"
+                      value={countdownDuration}
+                      onChange={(e) => setCountdownDuration(Number(e.target.value))}
+                      className="w-full accent-amber-400 cursor-pointer mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Save Buttons & Controls */}
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+                  <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="w-full sm:flex-1 py-3 px-4 rounded-xl font-black font-['Chakra_Petch'] text-xs sm:text-sm tracking-wide bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md active:scale-95"
+                    >
+                      {saveSuccess ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          SETTINGS SAVED & SYNCED!
+                        </>
+                      ) : (
+                        <>
+                          <Sliders className="w-4 h-4" />
+                          APPLY & SAVE SETTINGS
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetLobby}
+                      className="w-full sm:w-auto py-3 px-4 rounded-xl bg-slate-950 border border-red-500/40 hover:bg-red-500/10 text-red-400 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset Race Lobby
+                    </button>
+                  </div>
+                </div>
+
+                {/* Vercel & Production Readiness Info */}
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-1.5 text-[11px] font-mono text-slate-400">
+                  <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>ROUTE: /admin • LIVE FIREBASE SYNC</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    Settings sync live to the host display and all mobile controllers. Changing the patch size updates the finish line immediately.
+                  </p>
+                </div>
               </div>
-            </div>
-
-            {/* 4. Patch Size (MB / Clicks) & Countdown duration */}
-            <div className="space-y-4">
-              <h2 className="text-base font-bold font-['Chakra_Petch'] text-cyan-400 flex items-center gap-2">
-                4. Emergency Patch Size (MB / Clicks) & Prep Time
-              </h2>
-
-              <div>
-                <div className="flex justify-between items-center mb-1 text-xs font-mono">
-                  <span className="text-slate-300 font-bold">Emergency Patch Size (MB to Transfer)</span>
-                  <span className="text-cyan-400 font-bold text-sm">{requiredTaps.toLocaleString()} MB</span>
-                </div>
-                <input
-                  type="range"
-                  min="100"
-                  max="2000"
-                  step="50"
-                  value={requiredTaps}
-                  onChange={(e) => setRequiredTaps(Number(e.target.value))}
-                  className="w-full accent-cyan-400 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
-                  <span>100 MB (Fast)</span>
-                  <span>500 MB (Medium)</span>
-                  <span>1,000 MB (Standard 1TB Patch)</span>
-                  <span>2,000 MB (Endurance)</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1 text-xs font-mono">
-                  <span className="text-slate-300 font-bold">Countdown Prep Duration</span>
-                  <span className="text-amber-400 font-bold text-sm">{countdownDuration} Seconds</span>
-                </div>
-                <input
-                  type="range"
-                  min="3"
-                  max="10"
-                  step="1"
-                  value={countdownDuration}
-                  onChange={(e) => setCountdownDuration(Number(e.target.value))}
-                  className="w-full accent-amber-400 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
-                  <span>3s (Fast)</span>
-                  <span>5s (Standard)</span>
-                  <span>10s (Long)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Save Buttons */}
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-5 py-2.5 rounded-xl font-bold font-['Chakra_Petch'] text-xs md:text-sm tracking-wide bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 flex items-center gap-1.5 cursor-pointer transition-all shadow-md active:scale-95"
-              >
-                {saveSuccess ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    SETTINGS SAVED!
-                  </>
-                ) : (
-                  <>
-                    <Sliders className="w-4 h-4" />
-                    APPLY & SAVE SETTINGS
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetLobby}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-red-500/40 hover:bg-red-500/10 text-red-400 text-xs font-mono flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Force Reset Race Lobby
-              </button>
             </div>
           </form>
-
-          {/* Vercel & Production Readiness Info */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-2">
-            <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs font-bold">
-              <Globe className="w-4 h-4" />
-              <span>VERCEL & DEPLOYMENT ARCHITECTURE</span>
-            </div>
-            <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
-              • <strong>SPA Deep Routing:</strong> Configured with <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">vercel.json</code> rewrites so <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">/admin</code> and phone controllers load seamlessly without 404s.<br />
-              • <strong>Multiplayer Sync:</strong> Uses Google Cloud Firestore for real-time race telemetry. Player clicks never collide because each character slot syncs independently.<br />
-              • <strong>Custom Domain:</strong> Set <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">VITE_APP_URL</code> in Vercel environment variables if your QR codes should target a custom domain.
-            </p>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* TAB 2: Player Registrations */}
       {activeTab === 'registrations' && (
@@ -648,6 +695,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
           </div>
         </div>
       )}
+      </main>
 
       {/* Toast Notification (Eliminates window.alert) */}
       {toastMessage && (
