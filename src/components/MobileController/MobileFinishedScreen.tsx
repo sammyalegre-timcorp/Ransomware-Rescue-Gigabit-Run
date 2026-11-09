@@ -123,12 +123,12 @@ export const MobileFinishedScreen: React.FC<MobileFinishedScreenProps> = ({
       </div>
 
       {/* Footer Instructions */}
-      <footer className="shrink-0 bg-slate-900/80 border border-cyan-500/30 rounded-xl p-2 text-slate-300 text-[10px] sm:text-[11px] font-mono">
+      <footer className="shrink-0 bg-slate-900/80 border border-cyan-500/30 rounded-xl p-2.5 text-slate-300 text-[10px] sm:text-[11px] font-mono">
         <p className="text-cyan-300 font-bold mb-0.5">
-          📺 Look up at the shared main host display!
+          📺 Look up at the shared host display!
         </p>
-        <p className="text-slate-400 text-[9px] sm:text-[10px]">
-          The official victory podium ceremony is streaming on the big screen.
+        <p className="text-slate-400 text-[9px] sm:text-[10px] leading-tight">
+          Victory podium ceremony streaming on the main screen. This device will automatically disconnect when the next match begins.
         </p>
       </footer>
     </div>

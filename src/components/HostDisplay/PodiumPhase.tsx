@@ -1,22 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { LiveRaceDoc, GameSettings, PodiumWinner } from '../../types/game';
 import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { resetRaceLobby, archiveRaceHistory } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { Trophy, Medal, RotateCcw, Users, ArrowRight, Wifi } from 'lucide-react';
+import { Trophy, Medal, QrCode, ArrowRight, Wifi, Clock, Maximize, Minimize } from 'lucide-react';
 
 interface PodiumPhaseProps {
   liveRace: LiveRaceDoc;
   settings: GameSettings;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
   onOpenAdmin: () => void;
 }
 
 export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
   liveRace,
-  settings
+  settings,
+  isFullscreen,
+  onToggleFullscreen
 }) => {
+  const [autoResetSeconds, setAutoResetSeconds] = useState<number>(25);
   // Compute ordered winners from slots
   const winners: PodiumWinner[] = Object.values(liveRace.slots)
     .filter((s) => s.assigned || s.tapCount > 0)
@@ -72,14 +77,24 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
     archiveRaceHistory(liveRace.raceId, liveRace.slots, liveRace.targetTaps || settings.requiredTaps);
   }, []);
 
-  const handleRematch = async () => {
-    soundEngine.playClick();
-    await resetRaceLobby(true); // Keep players connected
-  };
+  // Auto-advance to next game match, clearing all slots & generating fresh QR codes
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAutoResetSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          resetRaceLobby(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const handleNewRaceLobby = async () => {
+  const handleStartNextGame = async () => {
     soundEngine.playClick();
-    await resetRaceLobby(false); // Clean slate for new lobby
+    await resetRaceLobby(false); // Clean slate: clears all slots and generates brand new raceId
   };
 
   return (
@@ -87,7 +102,7 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
       {/* Background radial glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-cyan-900/25 via-slate-950 to-slate-950 pointer-events-none" />
 
-      {/* Header with "Presented by TIM" */}
+      {/* Header with "Presented by TIM" and Fullscreen button */}
       <header className="relative z-10 text-center shrink-0 mb-1">
         <div className="flex items-center justify-center gap-2 mb-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold">
@@ -98,6 +113,16 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
             <Trophy className="w-3.5 h-3.5 text-amber-400" />
             CORE SERVER SECURED
           </div>
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 font-mono text-[11px] cursor-pointer transition-colors shadow-sm"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5 text-cyan-400" /> : <Maximize className="w-3.5 h-3.5 text-cyan-400" />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
+            </button>
+          )}
         </div>
 
         <h1 className="text-2xl md:text-4xl font-black italic tracking-wide bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 bg-clip-text text-transparent font-['Chakra_Petch']">
@@ -198,28 +223,27 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
         )}
       </div>
 
-      {/* Action Navigation Footer - NO admin button */}
-      <footer className="relative z-10 shrink-0 border-t border-slate-800 pt-2 flex items-center justify-between gap-4">
+      {/* Action Navigation Footer - Auto disconnects devices & generates fresh QR codes */}
+      <footer className="relative z-10 shrink-0 border-t border-slate-800 pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
           <Wifi className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Presented by TIM • Ransomware Exploit Neutralized</span>
+          <span>Presented by TIM • All devices automatically disconnect every match</span>
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-400">
+            <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>Next Match:</span>
+            <span className="text-amber-400 font-bold font-mono">{autoResetSeconds}s</span>
+          </div>
+
           <button
-            onClick={handleRematch}
-            className="px-4 py-2 rounded-xl bg-slate-900 border border-cyan-500 hover:bg-cyan-950/40 text-cyan-300 font-bold font-['Chakra_Petch'] text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md"
+            onClick={handleStartNextGame}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black font-['Chakra_Petch'] text-xs md:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-            Rematch (Keep Protocols)
-          </button>
-          <button
-            onClick={handleNewRaceLobby}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black font-['Chakra_Petch'] text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.4)]"
-          >
-            <Users className="w-3.5 h-3.5 text-slate-950" />
-            New Match (Reset Lobby)
-            <ArrowRight className="w-3.5 h-3.5" />
+            <QrCode className="w-4 h-4 text-slate-950" />
+            <span>START NEXT MATCH (GENERATE NEW QR CODES)</span>
+            <ArrowRight className="w-4 h-4 text-slate-950" />
           </button>
         </div>
       </footer>

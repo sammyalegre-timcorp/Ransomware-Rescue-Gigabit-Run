@@ -13,12 +13,48 @@ import { PodiumPhase } from './components/HostDisplay/PodiumPhase';
 import { MobileControllerView } from './components/MobileController/MobileControllerView';
 import { AdminPanel } from './components/AdminPanel/AdminPanel';
 import { soundEngine } from './services/sound';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Maximize, Minimize } from 'lucide-react';
 
 export default function App() {
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [liveRace, setLiveRace] = useState<LiveRaceDoc | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const elem = document.documentElement as any;
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          await elem.webkitRequestFullscreen();
+        }
+      } else {
+        const doc = document as any;
+        if (doc.exitFullscreen) {
+          await doc.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          await doc.webkitExitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen request blocked or unsupported:', err);
+    }
+  };
 
   // Parse URL query params, pathname, and hash to determine view
   const [currentUrl, setCurrentUrl] = useState(() => ({
@@ -119,8 +155,17 @@ export default function App() {
   // 3. Shared Main Host Display View (Completely non-scrollable, fits in viewport)
   return (
     <div className="relative h-screen max-h-screen w-full bg-slate-950 flex flex-col justify-between overflow-hidden select-none">
-      {/* Top Floating Sound Toggle for Host */}
+      {/* Top Floating Controls for Host (Fullscreen + Sound) */}
       <div className="fixed top-3 right-3 z-40 flex items-center gap-2">
+        <button
+          onClick={toggleFullscreen}
+          className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 transition-colors shadow-lg cursor-pointer flex items-center gap-1.5 text-xs font-mono"
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? <Minimize className="w-4 h-4 text-cyan-400" /> : <Maximize className="w-4 h-4 text-slate-300" />}
+          <span className="hidden sm:inline text-[10px]">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
+        </button>
+
         <button
           onClick={toggleSound}
           className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 transition-colors shadow-lg cursor-pointer"
@@ -136,6 +181,8 @@ export default function App() {
           <LobbyPhase
             liveRace={liveRace}
             settings={settings}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
         )}
 
@@ -144,6 +191,8 @@ export default function App() {
           <RaceTrack
             liveRace={liveRace}
             settings={settings}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
         )}
 
@@ -151,6 +200,8 @@ export default function App() {
           <PodiumPhase
             liveRace={liveRace}
             settings={settings}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
             onOpenAdmin={() => navigateTo('/admin')}
           />
         )}

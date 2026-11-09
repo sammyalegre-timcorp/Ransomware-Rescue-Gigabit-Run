@@ -6,6 +6,7 @@ import { StandbyScreen } from './StandbyScreen';
 import { MobileCountdownScreen } from './MobileCountdownScreen';
 import { ControllerTapScreen } from './ControllerTapScreen';
 import { MobileFinishedScreen } from './MobileFinishedScreen';
+import { DisconnectedScreen } from './DisconnectedScreen';
 import { setPlayerReady, joinSlotDirectly } from '../../services/gameService';
 import { CHARACTERS } from '../../constants/characters';
 import { AlertCircle } from 'lucide-react';
@@ -30,6 +31,24 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
   const slot = liveRace.slots[characterId];
   const char = CHARACTERS[characterId];
 
+  // Inspect session token in URL parameters
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const urlSession = searchParams.get('session');
+
+  // Bind this phone connection to the initial game session
+  const [activeSessionId] = useState<string>(() => {
+    return urlSession || liveRace.raceId;
+  });
+
+  // Track if this device has participated in or finished a race
+  const [hasFinishedMatch, setHasFinishedMatch] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (slot?.finished || liveRace.status === 'podium') {
+      setHasFinishedMatch(true);
+    }
+  }, [slot?.finished, liveRace.status]);
+
   // Track if user completed registration during this session
   const [hasRegistered, setHasRegistered] = useState<boolean>(() => {
     // If registration is disabled by admin, skip registration
@@ -42,12 +61,15 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
 
   // If registration is disabled and slot is not yet assigned, auto-assign slot directly
   useEffect(() => {
+    // Only auto-join if this is the active live race session
+    if (urlSession && liveRace.raceId && urlSession !== liveRace.raceId) return;
+
     if (!settings.registrationEnabled && !slot?.assigned) {
       joinSlotDirectly(characterId, char.name).then(() => {
         setHasRegistered(true);
       });
     }
-  }, [settings.registrationEnabled, slot?.assigned, characterId, char.name]);
+  }, [settings.registrationEnabled, slot?.assigned, characterId, char.name, urlSession, liveRace.raceId]);
 
   // Handle registration submission
   const handleRegistrationComplete = (name: string) => {
@@ -75,6 +97,38 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
           </button>
         )}
       </div>
+    );
+  }
+
+  // 1. Expired QR Check: The player scanned a QR code from a previous game session
+  if (urlSession && liveRace.raceId && urlSession !== liveRace.raceId) {
+    return (
+      <DisconnectedScreen
+        characterId={characterId}
+        reason="expired_qr"
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
+        onRefresh={() => window.location.reload()}
+      />
+    );
+  }
+
+  // 2. Automatic Disconnection: After each game, automatically disconnect any device.
+  // When the game ends / lobby resets, raceId changes and slots are cleared.
+  // The device must scan the newly generated QR code from the screen.
+  if (
+    (hasFinishedMatch && liveRace.status === 'lobby') ||
+    (activeSessionId && liveRace.raceId && liveRace.raceId !== activeSessionId) ||
+    (hasRegistered && liveRace.status === 'lobby' && !slot?.assigned)
+  ) {
+    return (
+      <DisconnectedScreen
+        characterId={characterId}
+        reason="game_ended"
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
+        onRefresh={() => window.location.reload()}
+      />
     );
   }
 

@@ -12,17 +12,23 @@ import {
   Trophy,
   Flag,
   Wifi,
-  ShieldAlert
+  ShieldAlert,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 
 interface RaceTrackProps {
   liveRace: LiveRaceDoc;
   settings: GameSettings;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const RaceTrack: React.FC<RaceTrackProps> = ({
   liveRace,
-  settings
+  settings,
+  isFullscreen,
+  onToggleFullscreen
 }) => {
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [commentary, setCommentary] = useState<string>('EMERGENCY PATCH TRANSMISSION UNDERWAY! PUMPING GIGABIT BANDWIDTH!');
@@ -125,6 +131,16 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
             <span className="text-slate-400 text-[11px]">Emergency Patch:</span>
             <span className="text-emerald-300 font-bold">{targetMB.toLocaleString()} MB</span>
           </div>
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="flex items-center gap-1.5 bg-slate-950/80 border border-cyan-500/40 hover:border-cyan-400 rounded-lg px-2.5 py-1 text-[11px] font-mono text-cyan-300 hover:text-white transition-colors cursor-pointer shadow-sm"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5 text-cyan-400" /> : <Maximize className="w-3.5 h-3.5 text-cyan-400" />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
+            </button>
+          )}
         </div>
       </header>
 

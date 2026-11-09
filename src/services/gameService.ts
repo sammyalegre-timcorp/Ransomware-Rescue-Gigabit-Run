@@ -414,7 +414,7 @@ export async function archiveRaceHistory(
   }
 }
 
-export async function resetRaceLobby(keepPlayers: boolean = false): Promise<void> {
+export async function resetRaceLobby(_keepPlayers: boolean = false): Promise<void> {
   try {
     // Read current settings to use configured target taps
     const settingsRef = doc(db, 'game_settings', 'config');
@@ -430,27 +430,13 @@ export async function resetRaceLobby(keepPlayers: boolean = false): Promise<void
     }
 
     const liveRef = doc(db, 'live_race', 'current');
-    const snap = await getDoc(liveRef);
-    let slots = createInitialSlots();
-
-    if (keepPlayers && snap.exists()) {
-      const prevSlots = (snap.data() as LiveRaceDoc).slots;
-      slots = { ...prevSlots };
-      for (const key of Object.keys(slots) as CharacterId[]) {
-        slots[key] = {
-          ...slots[key],
-          isReady: false,
-          tapCount: 0,
-          lastTapAt: 0,
-          finished: false,
-          finishTime: 0,
-          finishRank: 0
-        };
-      }
-    }
+    
+    // Per requirement: Automatically disconnect all devices after each game.
+    // Always clear slots and generate a brand-new raceId so new QR codes are generated every game.
+    const slots = createInitialSlots();
 
     const newRace: LiveRaceDoc = {
-      raceId: `race_${Date.now()}`,
+      raceId: `race_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       status: 'lobby',
       targetTaps,
       countdownRemaining: countdownDuration,

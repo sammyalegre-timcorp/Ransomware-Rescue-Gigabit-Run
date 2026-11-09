@@ -14,17 +14,23 @@ import {
   Flame,
   Clock,
   Wifi,
-  ShieldAlert
+  ShieldAlert,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 
 interface LobbyPhaseProps {
   liveRace: LiveRaceDoc;
   settings: GameSettings;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
   liveRace,
-  settings
+  settings,
+  isFullscreen,
+  onToggleFullscreen
 }) => {
   const [qrCodes, setQrCodes] = useState<Record<CharacterId, string>>({
     firewall_frank: '',
@@ -35,7 +41,8 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
 
   const charList = Object.values(CHARACTERS);
 
-  // Generate QR code URLs for each character slot
+  // Generate QR code URLs for each character slot, incorporating liveRace.raceId session token
+  // This guarantees fresh, unique QR codes are generated for every game match!
   useEffect(() => {
     // Clean base URL without trailing slash or index.html/admin paths
     const rawBase = (import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
@@ -44,11 +51,12 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
       .replace(/\/+$/, '');
 
     charList.forEach(async (char) => {
-      const controllerUrl = `${rawBase}/?role=controller&char=${char.id}`;
+      // Append session token to guarantee stale QR codes from earlier games cannot hijack this slot
+      const controllerUrl = `${rawBase}/?role=controller&char=${char.id}&session=${liveRace.raceId}`;
       const dataUrl = await generateQrDataUrl(controllerUrl);
       setQrCodes((prev) => ({ ...prev, [char.id]: dataUrl }));
     });
-  }, []);
+  }, [liveRace.raceId]);
 
   const readyCount = Object.values(liveRace.slots).filter((s) => s.assigned && s.isReady).length;
   const assignedCount = Object.values(liveRace.slots).filter((s) => s.assigned).length;
@@ -86,6 +94,16 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
             <span>Prep:</span>
             <span className="text-amber-400 font-bold">{settings.countdownDuration}s</span>
           </div>
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="flex items-center gap-1.5 bg-slate-900/90 border border-cyan-500/40 hover:border-cyan-400 rounded-lg px-2.5 py-1 text-[11px] font-mono text-cyan-300 hover:text-white transition-colors cursor-pointer shadow-sm"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5 text-cyan-400" /> : <Maximize className="w-3.5 h-3.5 text-cyan-400" />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
+            </button>
+          )}
         </div>
       </header>
 
