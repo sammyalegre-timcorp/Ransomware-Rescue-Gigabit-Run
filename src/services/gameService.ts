@@ -20,6 +20,7 @@ import {
   PodiumWinner
 } from '../types/game';
 import { CHARACTERS, DEFAULT_SETTINGS } from '../constants/characters';
+import { calculateSoloScore, SOLO_TIME_LIMIT_SECONDS } from '../utils/scoring';
 
 const SETTINGS_DOC_PATH = 'game_settings/config';
 const LIVE_RACE_PATH = 'live_race/current';
@@ -44,7 +45,8 @@ export function createInitialSlots(): Record<CharacterId, SlotState> {
       lastTapAt: 0,
       finished: false,
       finishTime: 0,
-      finishRank: 0
+      finishRank: 0,
+      score: 0
     };
   }
   return slots as Record<CharacterId, SlotState>;
@@ -250,10 +252,15 @@ export async function startCountdown(countdownSeconds?: number, targetTaps?: num
 
     if (snap.exists()) {
       const data = snap.data() as LiveRaceDoc;
+      const assignedSlots = Object.values(data.slots).filter((s) => s.assigned);
+      const isSoloMode = assignedSlots.length === 1;
+
       const updates: Record<string, any> = {
         status: 'countdown',
         countdownRemaining: effectiveCountdown,
         targetTaps: effectiveTarget,
+        isSoloMode,
+        soloTimeLimit: SOLO_TIME_LIMIT_SECONDS,
         startedAt: 0,
         endedAt: 0,
         updatedAt: new Date().toISOString()
@@ -266,6 +273,7 @@ export async function startCountdown(countdownSeconds?: number, targetTaps?: num
         updates[`slots.${key}.finished`] = false;
         updates[`slots.${key}.finishTime`] = 0;
         updates[`slots.${key}.finishRank`] = 0;
+        updates[`slots.${key}.score`] = 0;
       }
 
       await updateDoc(liveRef, updates);
@@ -289,9 +297,6 @@ export async function setRaceStatus(status: LiveRaceDoc['status'], extra?: Parti
 }
 
 // Player taps character button on mobile controller
-// CRITICAL FIX: Uses dot-notation fields to update ONLY this character's slot.
-// Progress is never overwritten or stolen by another player!
-// When tapping stops, progress stays in place (doesn't go back to starting line).
 export async function submitTapBatch(
   characterId: CharacterId,
   tapDelta: number,
@@ -321,6 +326,10 @@ export async function submitTapBatch(
 
     let finishRank = slot.finishRank;
     let finishTime = slot.finishTime;
+    let score = slot.score;
+
+    const assignedSlots = Object.values(data.slots).filter((s) => s.assigned);
+    const isSolo = data.isSoloMode || assignedSlots.length === 1;
 
     if (finishedNow && !slot.finished) {
       const finishedSlots = Object.values(data.slots).filter(
@@ -329,6 +338,13 @@ export async function submitTapBatch(
       finishRank = finishedSlots.length + 1;
       const raceStartTime = data.startedAt || now;
       finishTime = Math.max(1, now - raceStartTime);
+
+      // Score computation for Solo Player Speed Run:
+      // 100 points for <= 1 sec, down to 1 point at 14 sec (1 sec before 15s deadline).
+      if (isSolo) {
+        const finishTimeSeconds = finishTime / 1000;
+        score = calculateSoloScore(finishTimeSeconds, data.soloTimeLimit || SOLO_TIME_LIMIT_SECONDS);
+      }
     }
 
     // UPDATE ONLY THIS CHARACTER'S SLOT IN FIRESTORE
@@ -340,6 +356,9 @@ export async function submitTapBatch(
       [`slots.${characterId}.finishTime`]: finishTime,
       updatedAt: new Date().toISOString()
     };
+    if (score !== undefined) {
+      updates[`slots.${characterId}.score`] = score;
+    }
 
     // Check if all assigned active players have completed the race
     const updatedSlots = { ...data.slots };
@@ -349,12 +368,12 @@ export async function submitTapBatch(
       lastTapAt: now,
       finished: finishedNow,
       finishRank,
-      finishTime
+      finishTime,
+      score: score || slot.score || 0
     };
 
-    const assignedSlots = Object.values(updatedSlots).filter((s) => s.assigned);
     const allAssignedFinished =
-      assignedSlots.length > 0 && assignedSlots.every((s) => s.finished);
+      assignedSlots.length > 0 && assignedSlots.every((s) => s.characterId === characterId ? finishedNow : s.finished);
 
     if (allAssignedFinished) {
       updates.status = 'podium';
@@ -365,8 +384,52 @@ export async function submitTapBatch(
 
     // Archive race history when all finish
     if (allAssignedFinished) {
-      await archiveRaceHistory(data.raceId, updatedSlots, targetTaps);
+      await archiveRaceHistory(data.raceId, updatedSlots, targetTaps, isSolo);
     }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, LIVE_RACE_PATH);
+  }
+}
+
+// Called when the 15-second solo timer expires before completion
+export async function handleSoloTimeout(): Promise<void> {
+  try {
+    const liveRef = doc(db, 'live_race', 'current');
+    const snap = await getDoc(liveRef);
+    if (!snap.exists()) return;
+
+    const data = snap.data() as LiveRaceDoc;
+    if (data.status !== 'racing') return;
+
+    const assignedSlots = Object.values(data.slots).filter((s) => s.assigned);
+    if (assignedSlots.length !== 1) return;
+
+    const soloSlot = assignedSlots[0];
+    if (soloSlot.finished) return;
+
+    const now = Date.now();
+    const timeLimitMs = (data.soloTimeLimit || SOLO_TIME_LIMIT_SECONDS) * 1000;
+    const updates: Record<string, any> = {
+      [`slots.${soloSlot.characterId}.finished`]: true,
+      [`slots.${soloSlot.characterId}.finishTime`]: timeLimitMs,
+      [`slots.${soloSlot.characterId}.finishRank`]: 1,
+      [`slots.${soloSlot.characterId}.score`]: 0,
+      status: 'podium',
+      endedAt: now,
+      updatedAt: new Date().toISOString()
+    };
+
+    const updatedSlots = { ...data.slots };
+    updatedSlots[soloSlot.characterId] = {
+      ...soloSlot,
+      finished: true,
+      finishTime: timeLimitMs,
+      finishRank: 1,
+      score: 0
+    };
+
+    await updateDoc(liveRef, updates);
+    await archiveRaceHistory(data.raceId, updatedSlots, data.targetTaps || DEFAULT_SETTINGS.requiredTaps, true);
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, LIVE_RACE_PATH);
   }
@@ -375,7 +438,8 @@ export async function submitTapBatch(
 export async function archiveRaceHistory(
   raceId: string,
   slots: Record<CharacterId, SlotState>,
-  targetTaps: number
+  targetTaps: number,
+  isSoloMode?: boolean
 ): Promise<void> {
   try {
     const winners: PodiumWinner[] = Object.values(slots)
@@ -392,7 +456,8 @@ export async function archiveRaceHistory(
         name: s.playerName || CHARACTERS[s.characterId].name,
         company: s.playerCompany || 'Enterprise Corp',
         finishTimeSeconds: s.finishTime ? Number((s.finishTime / 1000).toFixed(2)) : 0,
-        tapCount: s.tapCount
+        tapCount: s.tapCount,
+        score: s.score || 0
       }));
 
     if (winners.length === 0) return;
@@ -405,7 +470,8 @@ export async function archiveRaceHistory(
       targetTaps,
       title: 'Ransomware Rescue: Gigabit Run',
       winners,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isSoloMode: isSoloMode !== undefined ? isSoloMode : winners.length === 1
     };
 
     await setDoc(historyRef, historyRecord);
@@ -440,6 +506,8 @@ export async function resetRaceLobby(_keepPlayers: boolean = false): Promise<voi
       status: 'lobby',
       targetTaps,
       countdownRemaining: countdownDuration,
+      isSoloMode: false,
+      soloTimeLimit: SOLO_TIME_LIMIT_SECONDS,
       startedAt: 0,
       endedAt: 0,
       slots,
@@ -469,6 +537,7 @@ export async function clearSlot(characterId: CharacterId): Promise<void> {
       [`slots.${characterId}.finished`]: false,
       [`slots.${characterId}.finishTime`]: 0,
       [`slots.${characterId}.finishRank`]: 0,
+      [`slots.${characterId}.score`]: 0,
       updatedAt: new Date().toISOString()
     });
   } catch (err) {

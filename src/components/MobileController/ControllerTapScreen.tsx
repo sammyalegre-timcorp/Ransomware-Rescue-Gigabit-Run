@@ -4,7 +4,8 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { submitTapBatch } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { Flame, Zap, AlertTriangle, Shield, Wifi, Volume2, VolumeX } from 'lucide-react';
+import { calculateSoloScore, SOLO_TIME_LIMIT_SECONDS } from '../../utils/scoring';
+import { Flame, Zap, AlertTriangle, Shield, Wifi, Volume2, VolumeX, Clock, Star } from 'lucide-react';
 
 interface ControllerTapScreenProps {
   characterId: CharacterId;
@@ -43,6 +44,22 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
   const recentTapsRef = useRef<number[]>([]);
   const lastSyncTimeRef = useRef<number>(Date.now());
   const buttonRef = useRef<HTMLDivElement>(null);
+
+  const assignedCount = Object.values(liveRace.slots).filter((s) => s.assigned).length;
+  const isSoloMode = liveRace.isSoloMode ?? (assignedCount === 1);
+  const soloTimeLimit = liveRace.soloTimeLimit || SOLO_TIME_LIMIT_SECONDS;
+
+  const [currentNow, setCurrentNow] = useState<number>(Date.now());
+  useEffect(() => {
+    if (!isSoloMode || liveRace.status !== 'racing') return;
+    const t = setInterval(() => setCurrentNow(Date.now()), 100);
+    return () => clearInterval(t);
+  }, [isSoloMode, liveRace.status]);
+
+  const raceStartTime = liveRace.startedAt || currentNow;
+  const elapsedSec = Math.max(0, (currentNow - raceStartTime) / 1000);
+  const remainingSec = Math.max(0, soloTimeLimit - elapsedSec);
+  const potentialScore = calculateSoloScore(elapsedSec, soloTimeLimit);
 
   // Reset to 0 only when a new lobby or countdown begins
   useEffect(() => {
@@ -166,6 +183,24 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Solo Mode 15s Countdown & Live Score HUD */}
+      {isSoloMode && (
+        <div className="shrink-0 my-0.5 flex items-center justify-between bg-slate-900/90 border border-amber-500/40 rounded-xl px-2.5 py-1 text-xs font-mono shadow-sm">
+          <div className="flex items-center gap-1.5 text-amber-300">
+            <Clock className={`w-3.5 h-3.5 ${remainingSec <= 5 ? 'text-red-400 animate-spin' : 'text-amber-400'}`} />
+            <span className="text-[10px] text-slate-400">15s Deadline:</span>
+            <strong className={`font-mono text-xs ${remainingSec <= 5 ? 'text-red-400 animate-pulse' : 'text-amber-300'}`}>
+              {remainingSec.toFixed(1)}s
+            </strong>
+          </div>
+          <div className="flex items-center gap-1.5 text-cyan-300">
+            <Star className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[10px] text-slate-400">Potential Score:</span>
+            <strong className="font-mono text-xs text-cyan-300">{potentialScore} PTS</strong>
+          </div>
+        </div>
+      )}
 
       {/* Dynamic Bandwidth / Momentum Alert */}
       <div className="shrink-0 my-0.5 text-center">

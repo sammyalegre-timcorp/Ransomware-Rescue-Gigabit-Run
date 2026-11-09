@@ -112,11 +112,19 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
         <div className="flex items-center gap-2 text-xs font-mono">
           <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 animate-pulse" />
           <span className="text-slate-300 truncate">
-            <strong className="text-red-400">RANSOMWARE ALERT:</strong> A ransomware exploit has breached the network. Push the emergency patch to core server. First to transfer <strong>{targetMB} MB</strong> secures the company!
+            {assignedCount === 1 ? (
+              <>
+                <strong className="text-amber-400">1-PLAYER SPEED TRIAL ACTIVE:</strong> 15-second countdown deadline! Score 100 pts for fastest finish (≤1s), down to 1 pt at 14s (1s before limit).
+              </>
+            ) : (
+              <>
+                <strong className="text-red-400">RANSOMWARE ALERT:</strong> A ransomware exploit has breached the network. Push the emergency patch to core server. First to transfer <strong>{targetMB} MB</strong> secures the company!
+              </>
+            )}
           </span>
         </div>
         <span className="text-[10px] font-mono text-cyan-400 shrink-0 font-bold hidden sm:inline">
-          Tap rapidly to pump Mbps
+          {assignedCount === 1 ? '15s Timer Trial' : 'Tap rapidly to pump Mbps'}
         </span>
       </div>
 
@@ -284,7 +292,9 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
             }`}
           >
             <Flame className="w-4 h-4 text-amber-300 animate-pulse" />
-            START GAME ({settings.countdownDuration}s COUNTDOWN ON PHONES)
+            {assignedCount === 1
+              ? `START 1-PLAYER SPEED TRIAL (15s DEADLINE • UP TO 100 PTS)`
+              : `START GAME (${settings.countdownDuration}s COUNTDOWN ON PHONES)`}
             <Zap className="w-4 h-4 text-yellow-300" />
           </button>
         </div>

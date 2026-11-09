@@ -3,7 +3,8 @@ import confetti from 'canvas-confetti';
 import { CharacterId, LiveRaceDoc } from '../../types/game';
 import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
-import { Trophy, Medal, Flag, Sparkles, Wifi, Volume2, VolumeX } from 'lucide-react';
+import { Trophy, Medal, Flag, Sparkles, Wifi, Volume2, VolumeX, Star } from 'lucide-react';
+import { calculateSoloScore, getScoreGrade } from '../../utils/scoring';
 
 interface MobileFinishedScreenProps {
   characterId: CharacterId;
@@ -23,8 +24,14 @@ export const MobileFinishedScreen: React.FC<MobileFinishedScreenProps> = ({
   const char = CHARACTERS[characterId];
   const slot = liveRace.slots[characterId];
 
+  const assignedCount = Object.values(liveRace.slots).filter((s) => s.assigned).length;
+  const isSoloMode = liveRace.isSoloMode ?? (assignedCount === 1);
+
   const rank = slot?.finishRank || 1;
-  const finishTime = slot?.finishTime ? (slot.finishTime / 1000).toFixed(2) : '28.40';
+  const finishTimeSec = slot?.finishTime ? Number((slot.finishTime / 1000).toFixed(2)) : 0;
+  const finishTime = finishTimeSec > 0 ? finishTimeSec.toFixed(2) : '15.00';
+  const soloScore = slot?.score !== undefined ? slot.score : calculateSoloScore(finishTimeSec, 15);
+  const grade = getScoreGrade(soloScore);
 
   useEffect(() => {
     confetti({
@@ -103,24 +110,44 @@ export const MobileFinishedScreen: React.FC<MobileFinishedScreenProps> = ({
         </p>
       </div>
 
-      {/* Placement Card */}
-      <div
-        className={`my-1 rounded-2xl border-2 p-3 sm:p-4 bg-gradient-to-b ${badge.bg} shadow-xl flex flex-col items-center`}
-      >
-        <div className="mb-0.5">{badge.icon}</div>
-        <div className="text-sm sm:text-base font-black font-['Chakra_Petch'] tracking-wider mb-0.5">
-          {badge.label}
+      {/* Placement Card (Solo Mode vs Multiplayer) */}
+      {isSoloMode ? (
+        <div className="my-1 rounded-2xl border-2 border-cyan-500/50 p-3 sm:p-4 bg-gradient-to-b from-slate-900 via-slate-900/90 to-cyan-950/40 shadow-xl flex flex-col items-center">
+          <div className={`px-3 py-0.5 rounded-full text-[10px] font-mono font-black tracking-widest uppercase bg-gradient-to-r ${grade.badgeBg} text-slate-950 mb-1.5`}>
+            {grade.title}
+          </div>
+          <div className="text-xs sm:text-sm font-bold font-mono text-slate-300">
+            SOLO SPEED RUN SCORE
+          </div>
+          <div className="text-3xl sm:text-4xl font-black font-['Chakra_Petch'] text-cyan-300 my-1">
+            {soloScore} <span className="text-lg font-mono text-amber-400">/ 100 PTS</span>
+          </div>
+          <div className="mt-0.5 text-xs font-mono text-slate-300">
+            Transfer Time: <strong className={soloScore > 0 ? "text-emerald-400" : "text-red-400"}>{finishTime}s</strong> / 15.0s
+          </div>
+          <div className="text-[10px] font-mono text-slate-400 mt-1 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800">
+            100 pts at ≤1.0s • 1 pt at 14.0s (1s before 15s limit)
+          </div>
         </div>
-        <div className="text-2xl sm:text-3xl font-mono font-black text-white">
-          #{rank}
+      ) : (
+        <div
+          className={`my-1 rounded-2xl border-2 p-3 sm:p-4 bg-gradient-to-b ${badge.bg} shadow-xl flex flex-col items-center`}
+        >
+          <div className="mb-0.5">{badge.icon}</div>
+          <div className="text-sm sm:text-base font-black font-['Chakra_Petch'] tracking-wider mb-0.5">
+            {badge.label}
+          </div>
+          <div className="text-2xl sm:text-3xl font-mono font-black text-white">
+            #{rank}
+          </div>
+          <div className="mt-1 text-xs font-mono text-slate-300">
+            Transfer Time: <strong className="text-emerald-400">{finishTime}s</strong>
+          </div>
+          <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+            Emergency Patch Data: {slot?.tapCount?.toLocaleString() || '1,000'} MB
+          </div>
         </div>
-        <div className="mt-1 text-xs font-mono text-slate-300">
-          Transfer Time: <strong className="text-emerald-400">{finishTime}s</strong>
-        </div>
-        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-          Emergency Patch Data: {slot?.tapCount?.toLocaleString() || '1,000'} MB
-        </div>
-      </div>
+      )}
 
       {/* Footer Instructions */}
       <footer className="shrink-0 bg-slate-900/80 border border-cyan-500/30 rounded-xl p-2.5 text-slate-300 text-[10px] sm:text-[11px] font-mono">

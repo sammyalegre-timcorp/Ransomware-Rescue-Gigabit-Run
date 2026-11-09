@@ -171,7 +171,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       return;
     }
 
-    const headers = ['Date', 'Title', 'Patch Size (MB)', 'Rank', 'Player Name', 'Company', 'Protocol', 'Finish Time (s)', 'MB Transferred'];
+    const headers = ['Date', 'Title', 'Patch Size (MB)', 'Rank', 'Player Name', 'Company', 'Protocol', 'Finish Time (s)', 'MB Transferred', 'Score (PTS)'];
     const rows: string[] = [];
 
     raceHistory.forEach((h) => {
@@ -185,7 +185,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
           `"${w.company.replace(/"/g, '""')}"`,
           `"${CHARACTERS[w.characterId]?.name || w.characterId}"`,
           `${w.finishTimeSeconds}`,
-          `${w.tapCount}`
+          `${w.tapCount}`,
+          `${w.score ?? (h.isSoloMode ? 'N/A' : '-')}`
         ].join(','));
       });
     });
@@ -682,8 +683,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                         <div className="truncate">
                           <div className="font-bold text-xs truncate">{winner.name}</div>
                           <div className="text-[10px] text-slate-400 truncate">{winner.company}</div>
-                          <div className="text-[10px] font-mono text-cyan-400">
-                            ⏱ {winner.finishTimeSeconds}s • {winner.tapCount} MB
+                          <div className="text-[10px] font-mono text-cyan-400 flex items-center gap-1.5 flex-wrap">
+                            <span>⏱ {winner.finishTimeSeconds}s • {winner.tapCount} MB</span>
+                            {winner.score !== undefined && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                                {winner.score} PTS
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { CharacterId, LiveRaceDoc, GameSettings } from '../../types/game';
 import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
-import { setRaceStatus } from '../../services/gameService';
+import { setRaceStatus, handleSoloTimeout } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
+import { calculateSoloScore, SOLO_TIME_LIMIT_SECONDS } from '../../utils/scoring';
 import {
   Gauge,
   Flame,
@@ -14,7 +15,10 @@ import {
   Wifi,
   ShieldAlert,
   Maximize,
-  Minimize
+  Minimize,
+  Clock,
+  Star,
+  Target
 } from 'lucide-react';
 
 interface RaceTrackProps {
@@ -76,9 +80,28 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
     };
   }, [liveRace.status]);
 
+  const assignedSlots = Object.values(liveRace.slots).filter((s) => s.assigned);
+  const isSoloMode = liveRace.isSoloMode ?? (assignedSlots.length === 1);
+  const soloTimeLimit = liveRace.soloTimeLimit || SOLO_TIME_LIMIT_SECONDS;
+
   const targetMB = settings.requiredTaps || liveRace.targetTaps || 1000;
   const raceStartTime = liveRace.startedAt || currentTime;
-  const elapsedTimeSeconds = isStaged ? '0.0' : Math.max(0, (currentTime - raceStartTime) / 1000).toFixed(1);
+  const elapsedSecNumber = isStaged ? 0 : Math.max(0, (currentTime - raceStartTime) / 1000);
+  const elapsedTimeSeconds = elapsedSecNumber.toFixed(1);
+  const remainingTimeSeconds = Math.max(0, soloTimeLimit - elapsedSecNumber).toFixed(1);
+  const currentPotentialScore = calculateSoloScore(elapsedSecNumber, soloTimeLimit);
+
+  // Enforce 15-second emergency deadline in Solo Mode
+  useEffect(() => {
+    if (!isStaged && liveRace.status === 'racing' && isSoloMode) {
+      if (elapsedSecNumber >= soloTimeLimit) {
+        const soloSlot = assignedSlots[0];
+        if (soloSlot && !soloSlot.finished) {
+          handleSoloTimeout();
+        }
+      }
+    }
+  }, [elapsedSecNumber, isStaged, liveRace.status, isSoloMode, soloTimeLimit, assignedSlots]);
 
   // Sort slots by MB transferred to find live ranks
   const sortedSlots = Object.values(liveRace.slots)
@@ -112,20 +135,53 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
           <span className="text-slate-700">|</span>
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-[11px] font-bold animate-pulse">
             <span className="w-2 h-2 rounded-full bg-red-500" />
-            {isStaged ? 'STAGING GATES ACTIVE' : 'LIVE GIGABIT STREAM'}
+            {isStaged
+              ? 'STAGING GATES ACTIVE'
+              : isSoloMode
+              ? 'SOLO SPEED RUN // 15s TIME ATTACK'
+              : 'LIVE GIGABIT STREAM'}
           </div>
           <h2 className="text-base md:text-xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch'] truncate max-w-sm">
             {settings.gameTitle}
           </h2>
         </div>
 
-        {/* Global Transfer Status */}
+        {/* Global Transfer Status & Solo Time/Score HUD */}
         <div className="flex items-center gap-3 text-xs font-mono">
-          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-            <span className="text-slate-400 text-[11px]">Time:</span>
-            <span className="text-cyan-300 font-bold">{elapsedTimeSeconds}s</span>
-          </div>
+          {isSoloMode ? (
+            <>
+              {/* 15-second countdown clock for solo mode */}
+              <div
+                className={`border rounded-lg px-2.5 py-1 flex items-center gap-1.5 transition-colors ${
+                  Number(remainingTimeSeconds) <= 5 && !isStaged
+                    ? 'bg-red-950/90 border-red-500 text-red-300 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                    : 'bg-slate-950/80 border-amber-500/50 text-amber-300'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                <span className="text-slate-400 text-[11px]">15s Deadline:</span>
+                <span className="font-bold font-mono text-amber-300 text-sm">
+                  {isStaged ? '15.0s' : `${remainingTimeSeconds}s`}
+                </span>
+              </div>
+
+              {/* Dynamic Live Score */}
+              <div className="bg-slate-950/80 border border-cyan-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                <Star className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-slate-400 text-[11px]">Target Score:</span>
+                <span className="text-cyan-300 font-bold font-mono text-sm">
+                  {isStaged ? '100' : currentPotentialScore} PTS
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+              <span className="text-slate-400 text-[11px]">Time:</span>
+              <span className="text-cyan-300 font-bold">{elapsedTimeSeconds}s</span>
+            </div>
+          )}
+
           <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
             <Gauge className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-slate-400 text-[11px]">Emergency Patch:</span>
@@ -144,20 +200,34 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
         </div>
       </header>
 
-      {/* Staging / Commentary Alert Ticker */}
+      {/* Staging / Commentary Alert Ticker with Solo rules */}
       <div className="shrink-0 mb-1.5 bg-slate-900/60 border border-slate-800 rounded-lg px-3.5 py-1.5 flex items-center gap-2.5">
         <div
           className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase shrink-0 ${
             isStaged
               ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+              : isSoloMode && Number(remainingTimeSeconds) <= 5
+              ? 'bg-red-500/20 text-red-300 border border-red-500/50 animate-bounce'
               : 'bg-cyan-500/20 text-cyan-300'
           }`}
         >
-          {isStaged ? 'STAGING AT START GATE' : 'Emergency Transmission'}
+          {isStaged
+            ? 'STAGING AT START GATE'
+            : isSoloMode
+            ? Number(remainingTimeSeconds) <= 5
+              ? 'CRITICAL DEADLINE'
+              : 'SOLO SPEED RUN'
+            : 'Emergency Transmission'}
         </div>
         <p className="text-xs font-mono text-slate-200 tracking-wide truncate">
           {isStaged
-            ? '⚠️ 5-SECOND COUNTDOWN ACTIVE ON MOBILE CONTROLLERS — PREPARE FINGERS FOR RAPID TAPPING!'
+            ? isSoloMode
+              ? '⚡ SOLO TIME TRIAL: 15.0s COUNTDOWN! Finish in 1s for 100 PTS • Finish 1s before time runs out for 1 PT!'
+              : '⚠️ 5-SECOND COUNTDOWN ACTIVE ON MOBILE CONTROLLERS — PREPARE FINGERS FOR RAPID TAPPING!'
+            : isSoloMode
+            ? Number(remainingTimeSeconds) <= 4
+              ? `🚨 RANSOMWARE EXPLOIT DETONATING IN ${remainingTimeSeconds}s! TAP NOW TO PREVENT COMPLETE NETWORK LOSS!`
+              : `⏱️ SOLO DEADLINE: ${remainingTimeSeconds}s REMAINING • Potential Score: ${currentPotentialScore} PTS (100 pts at 1s, 1 pt at 14s)`
             : commentary}
         </p>
       </div>
@@ -211,6 +281,14 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
                     {isFinished && (
                       <span className="flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">
                         <Trophy className="w-2.5 h-2.5" /> SECURED CORE #{(slot?.finishRank || 1)}
+                      </span>
+                    )}
+                    {isSoloMode && isAssigned && (
+                      <span className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                        <Star className="w-2.5 h-2.5 text-cyan-400" />
+                        {isFinished
+                          ? `SCORE: ${slot?.score ?? 0} PTS`
+                          : `SCORE: ${isStaged ? 100 : currentPotentialScore} PTS`}
                       </span>
                     )}
                   </div>

@@ -43,9 +43,13 @@ export const MobileCountdownScreen: React.FC<MobileCountdownScreenProps> = ({
           }
 
           if (liveRace.status === 'countdown') {
+            const assignedCount = Object.values(liveRace.slots).filter((s) => s.assigned).length;
+            const isSoloMode = assignedCount === 1;
             setRaceStatus('racing', {
               startedAt: Date.now(),
-              countdownRemaining: 0
+              countdownRemaining: 0,
+              isSoloMode,
+              soloTimeLimit: 15
             });
           }
           return 0;

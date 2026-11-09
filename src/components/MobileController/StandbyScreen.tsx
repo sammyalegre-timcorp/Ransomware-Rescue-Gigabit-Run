@@ -85,10 +85,18 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
 
         <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
           <div className="text-[9px] sm:text-[10px] font-bold text-amber-400 font-mono mb-0.5">
-            THE OBJECTIVE:
+            {readyRacers === 1 ? '1-PLAYER SOLO OBJECTIVE:' : 'THE OBJECTIVE:'}
           </div>
           <p className="text-[9px] sm:text-[10px] text-slate-300 font-sans leading-tight">
-            Tap rapidly to pump bandwidth (Mbps). The first player to transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> deploys the patch, secures the network, and wins the match.
+            {readyRacers === 1 ? (
+              <>
+                Tap rapidly to pump Mbps! Transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> within <strong>15 seconds</strong>. Earn <strong className="text-amber-400">100 PTS</strong> if you finish in ≤1s, down to <strong className="text-amber-400">1 PT</strong> at 14s.
+              </>
+            ) : (
+              <>
+                Tap rapidly to pump bandwidth (Mbps). The first player to transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> deploys the patch, secures the network, and wins the match.
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -97,7 +105,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
       <footer className="shrink-0 mt-0.5 pt-0.5 pb-2">
         <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[10px] font-mono text-slate-400 mb-1">
           <Users className="w-3 h-3 text-cyan-400" />
-          <span>{readyRacers} Protocols Ready in Lobby</span>
+          <span>{readyRacers} Protocols Ready {readyRacers === 1 ? '(Solo Time Trial)' : 'in Lobby'}</span>
         </div>
 
         <button
@@ -106,7 +114,7 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
           className="w-full py-2.5 px-4 rounded-xl font-black font-['Chakra_Petch'] text-sm tracking-wider bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-slate-950 shadow-[0_0_20px_rgba(249,115,22,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
         >
           <Flame className="w-4 h-4 text-amber-200 animate-pulse" />
-          START GAME?
+          {readyRacers === 1 ? 'START SOLO TIME TRIAL?' : 'START GAME?'}
           <Play className="w-3.5 h-3.5 fill-slate-950" />
         </button>
         <p className="text-[8.5px] font-mono text-slate-500 mt-0.5">

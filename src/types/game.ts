@@ -32,6 +32,7 @@ export interface SlotState {
   finished: boolean;
   finishTime: number; // elapsed milliseconds from race start
   finishRank: number; // 1, 2, 3, 4 (0 if not finished)
+  score?: number; // Calculated score (1-100 pts for solo speed run)
 }
 
 export interface LiveRaceDoc {
@@ -43,6 +44,8 @@ export interface LiveRaceDoc {
   endedAt: number; // ms timestamp
   slots: Record<CharacterId, SlotState>;
   updatedAt: string;
+  isSoloMode?: boolean; // Set to true when only 1 player plays
+  soloTimeLimit?: number; // 15-second emergency deadline for solo mode
 }
 
 export interface GameSettings {
@@ -73,6 +76,7 @@ export interface PodiumWinner {
   company: string;
   finishTimeSeconds: number;
   tapCount: number;
+  score?: number;
 }
 
 export interface RaceHistoryRecord {
@@ -83,4 +87,5 @@ export interface RaceHistoryRecord {
   title: string;
   winners: PodiumWinner[];
   createdAt: string;
+  isSoloMode?: boolean;
 }
