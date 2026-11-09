@@ -42,6 +42,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
   const [registrationEnabled, setRegistrationEnabled] = useState(settings.registrationEnabled);
   const [requiredTaps, setRequiredTaps] = useState(settings.requiredTaps);
   const [countdownDuration, setCountdownDuration] = useState(settings.countdownDuration);
+  const [soloTimeLimit, setSoloTimeLimit] = useState(settings.soloTimeLimit || 15);
   const [gameTitle, setGameTitle] = useState(settings.gameTitle);
   const [showTelemetryOnTrack, setShowTelemetryOnTrack] = useState(settings.showTelemetryOnTrack ?? false);
   const [isSaving, setIsSaving] = useState(false);
@@ -91,6 +92,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       registrationEnabled,
       requiredTaps: Number(requiredTaps),
       countdownDuration: Number(countdownDuration),
+      soloTimeLimit: Number(soloTimeLimit),
       gameTitle,
       showTelemetryOnTrack
     });
@@ -171,22 +173,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
       return;
     }
 
-    const headers = ['Date', 'Title', 'Patch Size (MB)', 'Rank', 'Player Name', 'Company', 'Protocol', 'Finish Time (s)', 'MB Transferred', 'Score (PTS)'];
+    const headers = ['Date', 'Title', 'Mode', 'Outcome', 'Patch Size (MB)', 'Rank', 'Player Name', 'Company', 'Protocol', 'Finish Time (s)', 'MB Transferred'];
     const rows: string[] = [];
 
     raceHistory.forEach((h) => {
       h.winners.forEach((w) => {
+        const mode = h.isSoloMode ? 'Solo Speed Run' : 'Multiplayer';
+        const outcome = h.isSoloMode
+          ? (w.outcome || (w.score && w.score > 0 ? 'SUCCESS' : 'FAILED'))
+          : `Rank #${w.rank}`;
         rows.push([
           `"${h.date}"`,
           `"${h.title}"`,
+          `"${mode}"`,
+          `"${outcome}"`,
           `${h.targetTaps}`,
           `${w.rank}`,
           `"${w.name.replace(/"/g, '""')}"`,
           `"${w.company.replace(/"/g, '""')}"`,
           `"${CHARACTERS[w.characterId]?.name || w.characterId}"`,
           `${w.finishTimeSeconds}`,
-          `${w.tapCount}`,
-          `${w.score ?? (h.isSoloMode ? 'N/A' : '-')}`
+          `${w.tapCount}`
         ].join(','));
       });
     });
@@ -477,6 +484,49 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                       className="w-full accent-amber-400 cursor-pointer mt-1"
                     />
                   </div>
+
+                  {/* 5. Solo Mode Time to Beat (Seconds) */}
+                  <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800/80 space-y-2">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-slate-300 font-bold">Solo Mode (Time to Beat):</span>
+                      <span className="text-emerald-400 font-black text-sm tracking-wide bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/40">
+                        {soloTimeLimit} Seconds
+                      </span>
+                    </div>
+
+                    {/* Quick presets */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      {[5, 10, 15, 20, 30].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setSoloTimeLimit(val)}
+                          className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                            soloTimeLimit === val
+                              ? 'bg-emerald-400 text-slate-950 shadow-sm'
+                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          }`}
+                        >
+                          {val}s {val === 15 ? '(Std)' : ''}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      type="range"
+                      min="5"
+                      max="60"
+                      step="1"
+                      value={soloTimeLimit}
+                      onChange={(e) => setSoloTimeLimit(Number(e.target.value))}
+                      className="w-full accent-emerald-400 cursor-pointer mt-1"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-slate-500">
+                      <span>5s (Hardcore)</span>
+                      <span>15s (Standard)</span>
+                      <span>60s (Extended)</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Save Buttons & Controls */}
@@ -685,10 +735,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ settings, onClose }) => 
                           <div className="text-[10px] text-slate-400 truncate">{winner.company}</div>
                           <div className="text-[10px] font-mono text-cyan-400 flex items-center gap-1.5 flex-wrap">
                             <span>⏱ {winner.finishTimeSeconds}s • {winner.tapCount} MB</span>
-                            {winner.score !== undefined && (
-                              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                                {winner.score} PTS
+                            {hist.isSoloMode ? (
+                              <span
+                                className={`px-1.5 py-0.2 rounded font-bold uppercase border text-[9px] ${
+                                  winner.outcome === 'SUCCESS' || (winner.score && winner.score > 0)
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                    : 'bg-red-500/20 text-red-300 border-red-500/40'
+                                }`}
+                              >
+                                {winner.outcome || (winner.score && winner.score > 0 ? 'SUCCESS' : 'FAILED')}
                               </span>
+                            ) : (
+                              winner.score !== undefined && (
+                                <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                                  {winner.score} PTS
+                                </span>
+                              )
                             )}
                           </div>
                         </div>

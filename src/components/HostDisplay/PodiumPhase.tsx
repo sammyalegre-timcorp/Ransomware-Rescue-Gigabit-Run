@@ -5,8 +5,8 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { resetRaceLobby, archiveRaceHistory } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { calculateSoloScore, getScoreGrade } from '../../utils/scoring';
-import { Trophy, Medal, QrCode, ArrowRight, Wifi, Clock, Maximize, Minimize, Star, ShieldCheck, Flame } from 'lucide-react';
+import { calculateSoloScore } from '../../utils/scoring';
+import { Trophy, Medal, Wifi, Maximize, Minimize, ShieldCheck, AlertTriangle, CheckCircle, Clock, QrCode, ArrowRight } from 'lucide-react';
 
 interface PodiumPhaseProps {
   liveRace: LiveRaceDoc;
@@ -26,6 +26,8 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
 
   const assignedCount = Object.values(liveRace.slots).filter((s) => s.assigned).length;
   const isSoloMode = liveRace.isSoloMode ?? (assignedCount === 1);
+  const soloTimeLimit = liveRace.soloTimeLimit || settings.soloTimeLimit || 15;
+  const targetMB = liveRace.targetTaps || settings.requiredTaps || 1000;
 
   // Compute ordered winners from slots
   const winners: PodiumWinner[] = Object.values(liveRace.slots)
@@ -41,8 +43,12 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
       const score = s.score !== undefined
         ? s.score
         : isSoloMode
-        ? calculateSoloScore(finishTimeSec, 15)
+        ? calculateSoloScore(finishTimeSec, soloTimeLimit)
         : undefined;
+
+      const outcome = s.outcome || (isSoloMode
+        ? (finishTimeSec > 0 && finishTimeSec <= soloTimeLimit && s.tapCount >= targetMB ? 'SUCCESS' : 'FAILED')
+        : undefined);
 
       return {
         rank: s.finishRank > 0 ? s.finishRank : idx + 1,
@@ -51,7 +57,8 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
         company: s.playerCompany || 'Enterprise Network',
         finishTimeSeconds: finishTimeSec,
         tapCount: s.tapCount,
-        score
+        score,
+        outcome
       };
     });
 
@@ -59,8 +66,12 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
   const secondPlace = winners[1];
   const thirdPlace = winners[2];
 
-  const finalScore = firstPlace?.score ?? (firstPlace ? calculateSoloScore(firstPlace.finishTimeSeconds, 15) : 0);
-  const grade = getScoreGrade(finalScore);
+  const isSoloSuccess = firstPlace
+    ? firstPlace.outcome === 'SUCCESS' ||
+      (firstPlace.finishTimeSeconds > 0 &&
+       firstPlace.finishTimeSeconds <= soloTimeLimit &&
+       firstPlace.tapCount >= targetMB)
+    : false;
 
   useEffect(() => {
     soundEngine.playFinishChime();
@@ -92,7 +103,7 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
     frame();
 
     // Archive race results to Firestore
-    archiveRaceHistory(liveRace.raceId, liveRace.slots, liveRace.targetTaps || settings.requiredTaps);
+    archiveRaceHistory(liveRace.raceId, liveRace.slots, targetMB, isSoloMode);
   }, []);
 
   // Auto-advance to next game match, clearing all slots & generating fresh QR codes
@@ -127,9 +138,33 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
             <Wifi className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             <span>Presented by TIM</span>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[11px] uppercase tracking-widest">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            CORE SERVER SECURED
+          <div
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono uppercase tracking-widest ${
+              isSoloMode
+                ? isSoloSuccess
+                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                  : 'bg-red-500/20 border-red-500/40 text-red-300'
+                : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+            }`}
+          >
+            {isSoloMode ? (
+              isSoloSuccess ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  CORE SERVER SECURED
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                  TIME EXCEEDED // CORE BREACHED
+                </>
+              )
+            ) : (
+              <>
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                CORE SERVER SECURED
+              </>
+            )}
           </div>
           {onToggleFullscreen && (
             <button
@@ -147,17 +182,39 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
           {isSoloMode ? 'SOLO TIME TRIAL EVALUATION' : 'CHAMPIONS OF THE GIGABIT RUN'}
         </h1>
         <p className="text-slate-400 font-mono text-xs mt-0.5">
-          {settings.gameTitle} • {isSoloMode ? '15-Second Emergency Benchmark' : '1 Terabyte Emergency Patch Deployed'} ({liveRace.targetTaps || settings.requiredTaps} MB)
+          {settings.gameTitle} • {isSoloMode ? `${soloTimeLimit}-Second Time to Beat Challenge` : '1 Terabyte Emergency Patch Deployed'} ({targetMB.toLocaleString()} MB)
         </p>
       </header>
 
       {isSoloMode && firstPlace ? (
-        /* Dedicated Solo Time Trial Evaluation Showcase */
+        /* Dedicated Solo Time Trial Evaluation Showcase - SUCCESS vs FAILED */
         <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center max-w-xl mx-auto w-full my-auto px-4 py-2">
-          <div className="w-full bg-slate-900/95 border-2 border-cyan-500/50 rounded-2xl p-4 md:p-6 shadow-[0_0_50px_rgba(6,182,212,0.3)] flex flex-col items-center text-center">
-            {/* Top Grade Pill */}
-            <div className={`px-4 py-1.5 rounded-full text-xs md:text-sm font-mono font-black tracking-widest uppercase bg-gradient-to-r ${grade.badgeBg} text-slate-950 shadow-lg mb-2 animate-bounce`}>
-              {grade.title}
+          <div
+            className={`w-full bg-slate-900/95 border-2 rounded-2xl p-4 md:p-6 shadow-2xl flex flex-col items-center text-center transition-all ${
+              isSoloSuccess
+                ? 'border-emerald-500/60 shadow-[0_0_50px_rgba(16,185,129,0.35)]'
+                : 'border-red-500/60 shadow-[0_0_50px_rgba(239,68,68,0.35)]'
+            }`}
+          >
+            {/* Top Status Banner */}
+            <div
+              className={`px-4 py-1.5 rounded-full text-xs md:text-sm font-mono font-black tracking-widest uppercase shadow-lg mb-2 flex items-center gap-1.5 ${
+                isSoloSuccess
+                  ? 'bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 text-slate-950 animate-bounce'
+                  : 'bg-gradient-to-r from-red-500 via-rose-500 to-red-600 text-white animate-pulse'
+              }`}
+            >
+              {isSoloSuccess ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  MISSION ACCOMPLISHED // SERVER DEFENDED
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4" />
+                  MISSION FAILED // DEADLINE EXCEEDED
+                </>
+              )}
             </div>
 
             {/* Character Avatar */}
@@ -170,26 +227,54 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
             </h2>
             <p className="text-xs text-slate-400 font-mono">{firstPlace.company}</p>
 
-            {/* Huge Score Readout */}
-            <div className="my-2.5 py-2.5 px-6 rounded-2xl bg-slate-950/90 border border-cyan-500/40 shadow-inner flex flex-col items-center w-full max-w-sm">
-              <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                FINAL PERFORMANCE SCORE
+            {/* Huge SUCCESS vs FAILED Banner */}
+            <div
+              className={`my-2.5 py-3.5 px-6 rounded-2xl border-2 shadow-inner flex flex-col items-center w-full max-w-sm ${
+                isSoloSuccess
+                  ? 'bg-emerald-950/40 border-emerald-500/60'
+                  : 'bg-red-950/40 border-red-500/60'
+              }`}
+            >
+              <span
+                className={`text-[11px] font-mono font-bold uppercase tracking-wider ${
+                  isSoloSuccess ? 'text-emerald-300' : 'text-red-300'
+                }`}
+              >
+                MISSION RESULT
               </span>
-              <div className="text-4xl md:text-6xl font-black font-['Chakra_Petch'] bg-gradient-to-r from-amber-300 via-cyan-300 to-emerald-400 bg-clip-text text-transparent my-1">
-                {finalScore} <span className="text-2xl md:text-3xl font-mono text-cyan-400">/ 100 PTS</span>
+              <div
+                className={`text-5xl md:text-7xl font-black font-['Chakra_Petch'] my-1 tracking-wider ${
+                  isSoloSuccess
+                    ? 'bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]'
+                    : 'bg-gradient-to-r from-red-400 via-rose-400 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(248,113,113,0.6)]'
+                }`}
+              >
+                {isSoloSuccess ? 'SUCCESS' : 'FAILED'}
               </div>
-              <div className="flex items-center justify-center gap-3 text-xs font-mono text-slate-300 mt-1">
-                <span>⏱ Time: <strong className={finalScore > 0 ? "text-emerald-400" : "text-red-400"}>{firstPlace.finishTimeSeconds > 0 ? `${firstPlace.finishTimeSeconds}s` : '15.0s (DNF)'}</strong> / 15.0s</span>
+              <div className="flex items-center justify-center gap-3 text-xs md:text-sm font-mono text-slate-200 mt-1">
+                <span>
+                  ⏱ Time:{' '}
+                  <strong className={isSoloSuccess ? 'text-emerald-400' : 'text-red-400'}>
+                    {firstPlace.finishTimeSeconds > 0
+                      ? `${firstPlace.finishTimeSeconds}s`
+                      : `${soloTimeLimit}.0s (TIMEOUT)`}
+                  </strong>
+                </span>
                 <span>•</span>
-                <span>Bandwidth: <strong className="text-cyan-400">{firstPlace.tapCount} MB</strong></span>
+                <span>
+                  Time to Beat: <strong className="text-amber-300">{soloTimeLimit}s</strong>
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] font-mono text-cyan-300">
+                Bandwidth Deployed: <strong>{firstPlace.tapCount.toLocaleString()} MB</strong> / {targetMB.toLocaleString()} MB
               </div>
             </div>
 
-            {/* Scoring Criteria Legend */}
+            {/* Criteria Legend */}
             <div className="text-[10.5px] font-mono text-slate-300 bg-slate-950/70 rounded-xl px-3.5 py-2 border border-slate-800 flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-400 shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
               <span>
-                <strong>SCORING:</strong> 100 PTS if finished in ≤1.0s • 1 PT at 14.0s (1s before 15s deadline) • 0 PTS on timeout
+                <strong>CRITERIA:</strong> Player must push 100% ({targetMB.toLocaleString()} MB) before the {soloTimeLimit}s clock expires to achieve SUCCESS.
               </span>
             </div>
           </div>

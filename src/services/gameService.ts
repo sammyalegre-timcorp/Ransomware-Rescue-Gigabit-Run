@@ -101,6 +101,9 @@ export async function updateGameSettings(settings: Partial<GameSettings>): Promi
     if (settings.countdownDuration !== undefined) {
       liveUpdate.countdownRemaining = Number(settings.countdownDuration);
     }
+    if (settings.soloTimeLimit !== undefined) {
+      liveUpdate.soloTimeLimit = Number(settings.soloTimeLimit);
+    }
     await updateDoc(liveRef, liveUpdate).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, SETTINGS_DOC_PATH);
@@ -240,11 +243,13 @@ export async function startCountdown(countdownSeconds?: number, targetTaps?: num
 
     let effectiveTarget = targetTaps || DEFAULT_SETTINGS.requiredTaps;
     let effectiveCountdown = countdownSeconds || DEFAULT_SETTINGS.countdownDuration;
+    let effectiveSoloTimeLimit = DEFAULT_SETTINGS.soloTimeLimit || 15;
 
     if (settingsSnap && settingsSnap.exists()) {
       const s = settingsSnap.data() as GameSettings;
       if (s.requiredTaps) effectiveTarget = Number(s.requiredTaps);
       if (s.countdownDuration && !countdownSeconds) effectiveCountdown = Number(s.countdownDuration);
+      if (s.soloTimeLimit) effectiveSoloTimeLimit = Number(s.soloTimeLimit);
     }
 
     const liveRef = doc(db, 'live_race', 'current');
@@ -260,7 +265,7 @@ export async function startCountdown(countdownSeconds?: number, targetTaps?: num
         countdownRemaining: effectiveCountdown,
         targetTaps: effectiveTarget,
         isSoloMode,
-        soloTimeLimit: SOLO_TIME_LIMIT_SECONDS,
+        soloTimeLimit: effectiveSoloTimeLimit,
         startedAt: 0,
         endedAt: 0,
         updatedAt: new Date().toISOString()
@@ -274,6 +279,7 @@ export async function startCountdown(countdownSeconds?: number, targetTaps?: num
         updates[`slots.${key}.finishTime`] = 0;
         updates[`slots.${key}.finishRank`] = 0;
         updates[`slots.${key}.score`] = 0;
+        updates[`slots.${key}.outcome`] = null;
       }
 
       await updateDoc(liveRef, updates);
@@ -331,6 +337,8 @@ export async function submitTapBatch(
     const assignedSlots = Object.values(data.slots).filter((s) => s.assigned);
     const isSolo = data.isSoloMode || assignedSlots.length === 1;
 
+    let outcome: 'SUCCESS' | 'FAILED' | undefined = slot.outcome;
+
     if (finishedNow && !slot.finished) {
       const finishedSlots = Object.values(data.slots).filter(
         (s) => s.finished && s.characterId !== characterId
@@ -340,10 +348,12 @@ export async function submitTapBatch(
       finishTime = Math.max(1, now - raceStartTime);
 
       // Score computation for Solo Player Speed Run:
-      // 100 points for <= 1 sec, down to 1 point at 14 sec (1 sec before 15s deadline).
+      // When playing solo, outcome is SUCCESS if finished within soloTimeLimit, else FAILED
       if (isSolo) {
         const finishTimeSeconds = finishTime / 1000;
-        score = calculateSoloScore(finishTimeSeconds, data.soloTimeLimit || SOLO_TIME_LIMIT_SECONDS);
+        const timeLimit = data.soloTimeLimit || SOLO_TIME_LIMIT_SECONDS;
+        score = calculateSoloScore(finishTimeSeconds, timeLimit);
+        outcome = finishTimeSeconds <= timeLimit ? 'SUCCESS' : 'FAILED';
       }
     }
 
@@ -359,6 +369,9 @@ export async function submitTapBatch(
     if (score !== undefined) {
       updates[`slots.${characterId}.score`] = score;
     }
+    if (outcome !== undefined) {
+      updates[`slots.${characterId}.outcome`] = outcome;
+    }
 
     // Check if all assigned active players have completed the race
     const updatedSlots = { ...data.slots };
@@ -369,7 +382,8 @@ export async function submitTapBatch(
       finished: finishedNow,
       finishRank,
       finishTime,
-      score: score || slot.score || 0
+      score: score || slot.score || 0,
+      outcome: outcome || slot.outcome
     };
 
     const allAssignedFinished =
@@ -391,7 +405,7 @@ export async function submitTapBatch(
   }
 }
 
-// Called when the 15-second solo timer expires before completion
+// Called when the solo timer expires before completion
 export async function handleSoloTimeout(): Promise<void> {
   try {
     const liveRef = doc(db, 'live_race', 'current');
@@ -414,6 +428,7 @@ export async function handleSoloTimeout(): Promise<void> {
       [`slots.${soloSlot.characterId}.finishTime`]: timeLimitMs,
       [`slots.${soloSlot.characterId}.finishRank`]: 1,
       [`slots.${soloSlot.characterId}.score`]: 0,
+      [`slots.${soloSlot.characterId}.outcome`]: 'FAILED',
       status: 'podium',
       endedAt: now,
       updatedAt: new Date().toISOString()
@@ -425,7 +440,8 @@ export async function handleSoloTimeout(): Promise<void> {
       finished: true,
       finishTime: timeLimitMs,
       finishRank: 1,
-      score: 0
+      score: 0,
+      outcome: 'FAILED'
     };
 
     await updateDoc(liveRef, updates);
@@ -457,7 +473,8 @@ export async function archiveRaceHistory(
         company: s.playerCompany || 'Enterprise Corp',
         finishTimeSeconds: s.finishTime ? Number((s.finishTime / 1000).toFixed(2)) : 0,
         tapCount: s.tapCount,
-        score: s.score || 0
+        score: s.score || 0,
+        outcome: s.outcome || (isSoloMode ? ((s.score && s.score > 0) || (s.finished && s.finishTime <= (slots[s.characterId]?.finishTime || 0)) ? 'SUCCESS' : 'FAILED') : undefined)
       }));
 
     if (winners.length === 0) return;
@@ -482,17 +499,19 @@ export async function archiveRaceHistory(
 
 export async function resetRaceLobby(_keepPlayers: boolean = false): Promise<void> {
   try {
-    // Read current settings to use configured target taps
+    // Read current settings to use configured target taps and solo time limit
     const settingsRef = doc(db, 'game_settings', 'config');
     const settingsSnap = await getDoc(settingsRef).catch(() => null);
 
     let targetTaps = DEFAULT_SETTINGS.requiredTaps;
     let countdownDuration = DEFAULT_SETTINGS.countdownDuration;
+    let soloTimeLimit = DEFAULT_SETTINGS.soloTimeLimit || 15;
 
     if (settingsSnap && settingsSnap.exists()) {
       const s = settingsSnap.data() as GameSettings;
       if (s.requiredTaps) targetTaps = Number(s.requiredTaps);
       if (s.countdownDuration) countdownDuration = Number(s.countdownDuration);
+      if (s.soloTimeLimit) soloTimeLimit = Number(s.soloTimeLimit);
     }
 
     const liveRef = doc(db, 'live_race', 'current');
@@ -507,7 +526,7 @@ export async function resetRaceLobby(_keepPlayers: boolean = false): Promise<voi
       targetTaps,
       countdownRemaining: countdownDuration,
       isSoloMode: false,
-      soloTimeLimit: SOLO_TIME_LIMIT_SECONDS,
+      soloTimeLimit,
       startedAt: 0,
       endedAt: 0,
       slots,

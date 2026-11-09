@@ -32,7 +32,8 @@ export interface SlotState {
   finished: boolean;
   finishTime: number; // elapsed milliseconds from race start
   finishRank: number; // 1, 2, 3, 4 (0 if not finished)
-  score?: number; // Calculated score (1-100 pts for solo speed run)
+  score?: number; // Calculated score
+  outcome?: 'SUCCESS' | 'FAILED'; // Success (beat the time) vs Failed (time expired)
 }
 
 export interface LiveRaceDoc {
@@ -45,13 +46,14 @@ export interface LiveRaceDoc {
   slots: Record<CharacterId, SlotState>;
   updatedAt: string;
   isSoloMode?: boolean; // Set to true when only 1 player plays
-  soloTimeLimit?: number; // 15-second emergency deadline for solo mode
+  soloTimeLimit?: number; // Time to Beat in solo mode (in seconds)
 }
 
 export interface GameSettings {
   registrationEnabled: boolean;
   requiredTaps: number;
   countdownDuration: number;
+  soloTimeLimit?: number; // Adjustable Time to Beat in solo mode
   gameTitle: string;
   showTelemetryOnTrack: boolean;
   updatedAt?: string;
@@ -77,6 +79,7 @@ export interface PodiumWinner {
   finishTimeSeconds: number;
   tapCount: number;
   score?: number;
+  outcome?: 'SUCCESS' | 'FAILED';
 }
 
 export interface RaceHistoryRecord {

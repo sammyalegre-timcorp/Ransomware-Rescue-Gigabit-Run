@@ -70,6 +70,7 @@ export const DEFAULT_SETTINGS = {
   registrationEnabled: true,
   requiredTaps: 1000,
   countdownDuration: 5,
+  soloTimeLimit: 15, // Default Time to Beat in solo mode (in seconds)
   gameTitle: 'Ransomware Rescue: Gigabit Run',
   showTelemetryOnTrack: false // default false: "just show the character move", with option in admin to show mbps/progress
 };

@@ -3,8 +3,7 @@ import confetti from 'canvas-confetti';
 import { CharacterId, LiveRaceDoc } from '../../types/game';
 import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
-import { Trophy, Medal, Flag, Sparkles, Wifi, Volume2, VolumeX, Star } from 'lucide-react';
-import { calculateSoloScore, getScoreGrade } from '../../utils/scoring';
+import { Trophy, Medal, Flag, Sparkles, Wifi, Volume2, VolumeX } from 'lucide-react';
 
 interface MobileFinishedScreenProps {
   characterId: CharacterId;
@@ -30,8 +29,11 @@ export const MobileFinishedScreen: React.FC<MobileFinishedScreenProps> = ({
   const rank = slot?.finishRank || 1;
   const finishTimeSec = slot?.finishTime ? Number((slot.finishTime / 1000).toFixed(2)) : 0;
   const finishTime = finishTimeSec > 0 ? finishTimeSec.toFixed(2) : '15.00';
-  const soloScore = slot?.score !== undefined ? slot.score : calculateSoloScore(finishTimeSec, 15);
-  const grade = getScoreGrade(soloScore);
+  const soloTimeLimit = liveRace.soloTimeLimit || 15;
+  const targetMB = liveRace.targetTaps || 1000;
+  const isSoloSuccess =
+    slot?.outcome === 'SUCCESS' ||
+    (finishTimeSec > 0 && finishTimeSec <= soloTimeLimit && (slot?.tapCount || 0) >= targetMB);
 
   useEffect(() => {
     confetti({
@@ -90,9 +92,17 @@ export const MobileFinishedScreen: React.FC<MobileFinishedScreenProps> = ({
               {isMuted ? <VolumeX className="w-3 h-3 text-red-400" /> : <Volume2 className="w-3 h-3 text-cyan-400" />}
             </button>
           )}
-          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[9px] sm:text-[10px] font-bold uppercase">
+          <div
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-mono text-[9px] sm:text-[10px] font-bold uppercase ${
+              isSoloMode
+                ? isSoloSuccess
+                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                  : 'bg-red-500/20 border-red-500/40 text-red-300'
+                : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+            }`}
+          >
             <Sparkles className="w-3 h-3 text-emerald-400" />
-            PATCH DEPLOYED
+            {isSoloMode ? (isSoloSuccess ? 'PATCH DEPLOYED' : 'TIME EXCEEDED') : 'PATCH DEPLOYED'}
           </div>
         </div>
       </header>
@@ -112,21 +122,45 @@ export const MobileFinishedScreen: React.FC<MobileFinishedScreenProps> = ({
 
       {/* Placement Card (Solo Mode vs Multiplayer) */}
       {isSoloMode ? (
-        <div className="my-1 rounded-2xl border-2 border-cyan-500/50 p-3 sm:p-4 bg-gradient-to-b from-slate-900 via-slate-900/90 to-cyan-950/40 shadow-xl flex flex-col items-center">
-          <div className={`px-3 py-0.5 rounded-full text-[10px] font-mono font-black tracking-widest uppercase bg-gradient-to-r ${grade.badgeBg} text-slate-950 mb-1.5`}>
-            {grade.title}
+        <div
+          className={`my-1 rounded-2xl border-2 p-3 sm:p-4 shadow-xl flex flex-col items-center transition-all ${
+            isSoloSuccess
+              ? 'border-emerald-500/60 bg-gradient-to-b from-slate-900 via-emerald-950/40 to-slate-950 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
+              : 'border-red-500/60 bg-gradient-to-b from-slate-900 via-red-950/40 to-slate-950 shadow-[0_0_30px_rgba(239,68,68,0.3)]'
+          }`}
+        >
+          <div
+            className={`px-3 py-0.5 rounded-full text-[10px] font-mono font-black tracking-widest uppercase mb-1.5 flex items-center gap-1 ${
+              isSoloSuccess
+                ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 animate-bounce'
+                : 'bg-gradient-to-r from-red-500 to-rose-600 text-white animate-pulse'
+            }`}
+          >
+            {isSoloSuccess ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED'}
           </div>
-          <div className="text-xs sm:text-sm font-bold font-mono text-slate-300">
-            SOLO SPEED RUN SCORE
+          <div className="text-xs sm:text-sm font-bold font-mono text-slate-300 uppercase tracking-wider">
+            MISSION RESULT
           </div>
-          <div className="text-3xl sm:text-4xl font-black font-['Chakra_Petch'] text-cyan-300 my-1">
-            {soloScore} <span className="text-lg font-mono text-amber-400">/ 100 PTS</span>
+          <div
+            className={`text-4xl sm:text-5xl font-black font-['Chakra_Petch'] my-1 tracking-wider ${
+              isSoloSuccess
+                ? 'bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(52,211,153,0.6)]'
+                : 'bg-gradient-to-r from-red-400 via-rose-400 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(248,113,113,0.6)]'
+            }`}
+          >
+            {isSoloSuccess ? 'SUCCESS' : 'FAILED'}
           </div>
           <div className="mt-0.5 text-xs font-mono text-slate-300">
-            Transfer Time: <strong className={soloScore > 0 ? "text-emerald-400" : "text-red-400"}>{finishTime}s</strong> / 15.0s
+            Transfer Time:{' '}
+            <strong className={isSoloSuccess ? 'text-emerald-400' : 'text-red-400'}>
+              {finishTimeSec > 0 ? `${finishTime}s` : `${soloTimeLimit}.0s (TIMEOUT)`}
+            </strong>{' '}
+            / {soloTimeLimit}s
           </div>
-          <div className="text-[10px] font-mono text-slate-400 mt-1 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800">
-            100 pts at ≤1.0s • 1 pt at 14.0s (1s before 15s limit)
+          <div className="text-[10px] font-mono text-slate-400 mt-1 bg-slate-950/70 px-2.5 py-0.5 rounded border border-slate-800">
+            {isSoloSuccess
+              ? 'Core Server locked down and secured from ransomware breach'
+              : 'Time limit exceeded before emergency patch completed'}
           </div>
         </div>
       ) : (

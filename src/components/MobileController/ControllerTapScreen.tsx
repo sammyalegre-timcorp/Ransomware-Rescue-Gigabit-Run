@@ -4,8 +4,8 @@ import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { submitTapBatch } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
-import { calculateSoloScore, SOLO_TIME_LIMIT_SECONDS } from '../../utils/scoring';
-import { Flame, Zap, AlertTriangle, Shield, Wifi, Volume2, VolumeX, Clock, Star } from 'lucide-react';
+import { SOLO_TIME_LIMIT_SECONDS } from '../../utils/scoring';
+import { Flame, Zap, AlertTriangle, Shield, Wifi, Volume2, VolumeX, Clock } from 'lucide-react';
 
 interface ControllerTapScreenProps {
   characterId: CharacterId;
@@ -59,7 +59,6 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
   const raceStartTime = liveRace.startedAt || currentNow;
   const elapsedSec = Math.max(0, (currentNow - raceStartTime) / 1000);
   const remainingSec = Math.max(0, soloTimeLimit - elapsedSec);
-  const potentialScore = calculateSoloScore(elapsedSec, soloTimeLimit);
 
   // Reset to 0 only when a new lobby or countdown begins
   useEffect(() => {
@@ -184,20 +183,32 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
         </div>
       </header>
 
-      {/* Solo Mode 15s Countdown & Live Score HUD */}
+      {/* Solo Mode Time to Beat Countdown & Objective HUD */}
       {isSoloMode && (
-        <div className="shrink-0 my-0.5 flex items-center justify-between bg-slate-900/90 border border-amber-500/40 rounded-xl px-2.5 py-1 text-xs font-mono shadow-sm">
-          <div className="flex items-center gap-1.5 text-amber-300">
-            <Clock className={`w-3.5 h-3.5 ${remainingSec <= 5 ? 'text-red-400 animate-spin' : 'text-amber-400'}`} />
-            <span className="text-[10px] text-slate-400">15s Deadline:</span>
-            <strong className={`font-mono text-xs ${remainingSec <= 5 ? 'text-red-400 animate-pulse' : 'text-amber-300'}`}>
+        <div
+          className={`shrink-0 my-0.5 flex items-center justify-between border-2 rounded-xl px-3 py-1.5 text-xs font-mono shadow-md transition-all ${
+            remainingSec <= 5
+              ? 'bg-red-950/90 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+              : 'bg-slate-900/95 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Clock className={`w-4 h-4 ${remainingSec <= 5 ? 'text-red-400 animate-spin' : 'text-amber-400'}`} />
+            <span className="text-[11px] text-slate-300 font-bold uppercase tracking-wider">Time to Beat:</span>
+            <strong className={`font-mono text-base md:text-lg font-black ${remainingSec <= 5 ? 'text-red-300 animate-pulse' : 'text-amber-300'}`}>
               {remainingSec.toFixed(1)}s
             </strong>
           </div>
-          <div className="flex items-center gap-1.5 text-cyan-300">
-            <Star className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[10px] text-slate-400">Potential Score:</span>
-            <strong className="font-mono text-xs text-cyan-300">{potentialScore} PTS</strong>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${
+                remainingSec <= 5
+                  ? 'bg-red-500/20 text-red-300 border-red-500/40 animate-pulse'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              }`}
+            >
+              {remainingSec <= 5 ? 'HURRY // LOW TIME' : 'OBJECTIVE: SUCCESS'}
+            </span>
           </div>
         </div>
       )}

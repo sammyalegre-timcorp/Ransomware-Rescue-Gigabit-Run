@@ -16,9 +16,7 @@ import {
   ShieldAlert,
   Maximize,
   Minimize,
-  Clock,
-  Star,
-  Target
+  Clock
 } from 'lucide-react';
 
 interface RaceTrackProps {
@@ -89,7 +87,6 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
   const elapsedSecNumber = isStaged ? 0 : Math.max(0, (currentTime - raceStartTime) / 1000);
   const elapsedTimeSeconds = elapsedSecNumber.toFixed(1);
   const remainingTimeSeconds = Math.max(0, soloTimeLimit - elapsedSecNumber).toFixed(1);
-  const currentPotentialScore = calculateSoloScore(elapsedSecNumber, soloTimeLimit);
 
   // Enforce 15-second emergency deadline in Solo Mode
   useEffect(() => {
@@ -138,7 +135,7 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
             {isStaged
               ? 'STAGING GATES ACTIVE'
               : isSoloMode
-              ? 'SOLO SPEED RUN // 15s TIME ATTACK'
+              ? `SOLO TIME ATTACK // ${soloTimeLimit}s TIME TO BEAT`
               : 'LIVE GIGABIT STREAM'}
           </div>
           <h2 className="text-base md:text-xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch'] truncate max-w-sm">
@@ -146,34 +143,14 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
           </h2>
         </div>
 
-        {/* Global Transfer Status & Solo Time/Score HUD */}
+        {/* Global Transfer Status & HUD */}
         <div className="flex items-center gap-3 text-xs font-mono">
           {isSoloMode ? (
-            <>
-              {/* 15-second countdown clock for solo mode */}
-              <div
-                className={`border rounded-lg px-2.5 py-1 flex items-center gap-1.5 transition-colors ${
-                  Number(remainingTimeSeconds) <= 5 && !isStaged
-                    ? 'bg-red-950/90 border-red-500 text-red-300 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]'
-                    : 'bg-slate-950/80 border-amber-500/50 text-amber-300'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-                <span className="text-slate-400 text-[11px]">15s Deadline:</span>
-                <span className="font-bold font-mono text-amber-300 text-sm">
-                  {isStaged ? '15.0s' : `${remainingTimeSeconds}s`}
-                </span>
-              </div>
-
-              {/* Dynamic Live Score */}
-              <div className="bg-slate-950/80 border border-cyan-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                <Star className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-slate-400 text-[11px]">Target Score:</span>
-                <span className="text-cyan-300 font-bold font-mono text-sm">
-                  {isStaged ? '100' : currentPotentialScore} PTS
-                </span>
-              </div>
-            </>
+            <div className="bg-slate-950/80 border border-amber-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-slate-400 text-[11px]">Time to Beat:</span>
+              <span className="text-amber-300 font-bold font-mono text-sm">{soloTimeLimit}s</span>
+            </div>
           ) : (
             <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
@@ -200,6 +177,65 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
         </div>
       </header>
 
+      {/* Prominent Solo Mode "Time to Beat" Banner - Large & Eye-Catching */}
+      {isSoloMode && (
+        <div className="shrink-0 mb-1.5 bg-gradient-to-r from-slate-900/95 via-slate-900 to-slate-900/95 border-2 border-amber-500/50 rounded-2xl px-4 py-2 flex items-center justify-between shadow-[0_0_30px_rgba(245,158,11,0.25)]">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-xl transition-colors ${
+                Number(remainingTimeSeconds) <= 5 && !isStaged
+                  ? 'bg-red-500/20 text-red-400 animate-bounce'
+                  : 'bg-amber-500/20 text-amber-400'
+              }`}
+            >
+              <Clock className="w-6 h-6 md:w-8 md:h-8" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] md:text-xs font-mono font-black text-amber-400 tracking-wider uppercase">
+                  TIME TO BEAT // EMERGENCY DEADLINE
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
+                  Target: {targetMB.toLocaleString()} MB
+                </span>
+              </div>
+              <div className="text-xs md:text-sm font-['Chakra_Petch'] text-slate-200 mt-0.5">
+                {Number(remainingTimeSeconds) <= 5 && !isStaged
+                  ? '⚠️ CRITICAL: TIME EXPIRING! RAPID PUMP REQUIRED TO SECURE CORE!'
+                  : `Transfer ${targetMB.toLocaleString()} MB before clock expires to achieve SUCCESS`}
+              </div>
+            </div>
+          </div>
+
+          {/* Enormous digital countdown clock */}
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex items-baseline gap-1 px-4 md:px-6 py-1 md:py-1.5 rounded-2xl border-2 font-mono transition-all ${
+                Number(remainingTimeSeconds) <= 5 && !isStaged
+                  ? 'bg-red-950/90 border-red-500 text-red-300 animate-pulse shadow-[0_0_35px_rgba(239,68,68,0.7)]'
+                  : 'bg-slate-950/95 border-amber-400/80 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.35)]'
+              }`}
+            >
+              <span className="text-3xl md:text-5xl font-black font-['Chakra_Petch'] tracking-tight">
+                {isStaged ? soloTimeLimit.toFixed(1) : remainingTimeSeconds}
+              </span>
+              <span className="text-base md:text-2xl font-bold text-amber-400/80">s</span>
+            </div>
+
+            <div className="hidden sm:flex flex-col items-end text-right">
+              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">CHALLENGE</span>
+              <span
+                className={`text-xs md:text-sm font-mono font-black ${
+                  Number(remainingTimeSeconds) > 0 ? 'text-emerald-400' : 'text-red-400'
+                }`}
+              >
+                {isStaged ? 'PREPARING' : Number(remainingTimeSeconds) > 0 ? 'BEAT THE CLOCK' : 'TIME UP'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Staging / Commentary Alert Ticker with Solo rules */}
       <div className="shrink-0 mb-1.5 bg-slate-900/60 border border-slate-800 rounded-lg px-3.5 py-1.5 flex items-center gap-2.5">
         <div
@@ -216,18 +252,18 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
             : isSoloMode
             ? Number(remainingTimeSeconds) <= 5
               ? 'CRITICAL DEADLINE'
-              : 'SOLO SPEED RUN'
+              : 'SOLO TIME ATTACK'
             : 'Emergency Transmission'}
         </div>
         <p className="text-xs font-mono text-slate-200 tracking-wide truncate">
           {isStaged
             ? isSoloMode
-              ? '⚡ SOLO TIME TRIAL: 15.0s COUNTDOWN! Finish in 1s for 100 PTS • Finish 1s before time runs out for 1 PT!'
+              ? `⚡ SOLO TIME TRIAL: ${soloTimeLimit.toFixed(1)}s TIME TO BEAT! Pump ${targetMB.toLocaleString()} MB before clock expires to achieve SUCCESS!`
               : '⚠️ 5-SECOND COUNTDOWN ACTIVE ON MOBILE CONTROLLERS — PREPARE FINGERS FOR RAPID TAPPING!'
             : isSoloMode
             ? Number(remainingTimeSeconds) <= 4
-              ? `🚨 RANSOMWARE EXPLOIT DETONATING IN ${remainingTimeSeconds}s! TAP NOW TO PREVENT COMPLETE NETWORK LOSS!`
-              : `⏱️ SOLO DEADLINE: ${remainingTimeSeconds}s REMAINING • Potential Score: ${currentPotentialScore} PTS (100 pts at 1s, 1 pt at 14s)`
+              ? `🚨 RANSOMWARE EXPLOIT DETONATING IN ${remainingTimeSeconds}s! PUMP BANDWIDTH TO SECURE SUCCESS!`
+              : `⏱️ TIME TO BEAT: ${remainingTimeSeconds}s REMAINING • Deploy 100% of emergency patch to achieve SUCCESS!`
             : commentary}
         </p>
       </div>
@@ -284,11 +320,21 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
                       </span>
                     )}
                     {isSoloMode && isAssigned && (
-                      <span className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
-                        <Star className="w-2.5 h-2.5 text-cyan-400" />
+                      <span
+                        className={`flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase border ${
+                          isFinished
+                            ? slot?.outcome === 'SUCCESS' || (slot?.finishTime && slot.finishTime <= soloTimeLimit * 1000)
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-red-500/20 text-red-300 border-red-500/40'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        }`}
+                      >
+                        <Clock className="w-2.5 h-2.5" />
                         {isFinished
-                          ? `SCORE: ${slot?.score ?? 0} PTS`
-                          : `SCORE: ${isStaged ? 100 : currentPotentialScore} PTS`}
+                          ? slot?.outcome === 'SUCCESS' || (slot?.finishTime && slot.finishTime <= soloTimeLimit * 1000)
+                            ? 'SUCCESS'
+                            : 'FAILED'
+                          : `TIME TO BEAT: ${remainingTimeSeconds}s`}
                       </span>
                     )}
                   </div>
