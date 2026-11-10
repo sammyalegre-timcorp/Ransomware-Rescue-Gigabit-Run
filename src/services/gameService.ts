@@ -445,6 +445,28 @@ export async function handleSoloTimeout(): Promise<void> {
   }
 }
 
+/**
+ * Helper to recursively remove or nullify undefined values before passing to Firestore
+ */
+function sanitizeForFirestore<T>(data: T): T {
+  if (data === undefined) {
+    return null as unknown as T;
+  }
+  if (Array.isArray(data)) {
+    return data.map(sanitizeForFirestore) as unknown as T;
+  }
+  if (data !== null && typeof data === 'object') {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
 export async function archiveRaceHistory(
   raceId: string,
   slots: Record<CharacterId, SlotState>,
@@ -452,6 +474,7 @@ export async function archiveRaceHistory(
   isSoloMode?: boolean
 ): Promise<void> {
   try {
+    const safeRaceId = raceId || `race_${Date.now()}`;
     const winners: PodiumWinner[] = Object.values(slots)
       .filter((s) => s.finished || s.tapCount > 0)
       .sort((a, b) => {
@@ -460,32 +483,45 @@ export async function archiveRaceHistory(
         if (b.finishRank > 0) return 1;
         return b.tapCount - a.tapCount;
       })
-      .map((s, index) => ({
-        rank: s.finishRank > 0 ? s.finishRank : index + 1,
-        characterId: s.characterId,
-        name: s.playerName || CHARACTERS[s.characterId].name,
-        company: s.playerCompany || 'Enterprise Corp',
-        finishTimeSeconds: s.finishTime ? Number((s.finishTime / 1000).toFixed(2)) : 0,
-        tapCount: s.tapCount,
-        score: s.score || 0,
-        outcome: s.outcome || (isSoloMode ? ((s.score && s.score > 0) || (s.finished && s.finishTime <= (slots[s.characterId]?.finishTime || 0)) ? 'SUCCESS' : 'FAILED') : undefined)
-      }));
+      .map((s, index) => {
+        const finishTimeSec = s.finishTime ? Number((s.finishTime / 1000).toFixed(2)) : 0;
+        const winner: PodiumWinner = {
+          rank: s.finishRank > 0 ? s.finishRank : index + 1,
+          characterId: s.characterId,
+          name: s.playerName || CHARACTERS[s.characterId]?.name || 'Security Protocol',
+          company: s.playerCompany || 'Enterprise Corp',
+          finishTimeSeconds: finishTimeSec,
+          tapCount: s.tapCount || 0,
+          score: s.score ?? 0
+        };
+
+        const resolvedOutcome = s.outcome || (isSoloMode
+          ? ((s.score && s.score > 0) || (s.finished && finishTimeSec > 0) ? 'SUCCESS' : 'FAILED')
+          : undefined);
+
+        if (resolvedOutcome) {
+          winner.outcome = resolvedOutcome;
+        }
+
+        return winner;
+      });
 
     if (winners.length === 0) return;
 
-    const historyId = `hist_${Date.now()}`;
+    // Use deterministic raceId so duplicate triggers from tap batch & podium phase don't create duplicate records
+    const historyId = `hist_${safeRaceId}`;
     const historyRef = doc(db, HISTORY_COLLECTION, historyId);
     const historyRecord: RaceHistoryRecord = {
-      raceId,
+      raceId: safeRaceId,
       date: new Date().toLocaleString(),
-      targetTaps,
+      targetTaps: targetTaps || DEFAULT_SETTINGS.requiredTaps,
       title: 'Ransomware Rescue: Gigabit Run',
       winners,
       createdAt: new Date().toISOString(),
       isSoloMode: isSoloMode !== undefined ? isSoloMode : winners.length === 1
     };
 
-    await setDoc(historyRef, historyRecord);
+    await setDoc(historyRef, sanitizeForFirestore(historyRecord));
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, HISTORY_COLLECTION);
   }

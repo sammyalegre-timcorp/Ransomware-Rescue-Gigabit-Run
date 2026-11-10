@@ -3,7 +3,7 @@ import { CharacterId, LiveRaceDoc, GameSettings } from '../../types/game';
 import { CHARACTERS } from '../../constants/characters';
 import { CharacterAvatar } from '../common/CharacterAvatar';
 import { generateQrDataUrl } from '../../utils/qrCode';
-import { startCountdown, clearSlot } from '../../services/gameService';
+import { startCountdown, clearSlot, resetRaceLobby } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
 import {
   QrCode,
@@ -107,6 +107,16 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
             <span>Prep:</span>
             <span className="text-amber-400 font-bold">{settings.countdownDuration}s</span>
           </div>
+          {assignedCount > 0 && (
+            <button
+              onClick={() => resetRaceLobby(false)}
+              className="flex items-center gap-1.5 bg-red-950/80 hover:bg-red-900 border border-red-500/50 rounded-lg px-2.5 py-1 text-[11px] font-mono text-red-300 hover:text-white transition-colors cursor-pointer shadow-sm"
+              title="Disconnect all connected devices and reset lobby slots"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+              <span className="hidden md:inline">Disconnect All</span>
+            </button>
+          )}
           {onToggleSound && (
             <button
               onClick={onToggleSound}

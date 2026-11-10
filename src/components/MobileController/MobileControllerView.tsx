@@ -45,29 +45,29 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
     return generated;
   });
 
-  // Track the active race session this phone has joined
-  const [sessionRaceId, setSessionRaceId] = useState<string>(() => {
-    return liveRace.raceId;
+  // Fixed session token this phone was bound to when scanning the QR code
+  const [boundSessionId] = useState<string>(() => {
+    return urlSession || liveRace.raceId;
   });
 
-  // Track if this device has participated in an active match (countdown, racing, finished, or podium)
-  const [hasPlayedInRace, setHasPlayedInRace] = useState<boolean>(false);
+  // Track if this device participated in a race that finished or reached podium
+  const [hasCompletedMatch, setHasCompletedMatch] = useState<boolean>(() => {
+    return Boolean(slot?.finished || liveRace.status === 'podium');
+  });
 
   useEffect(() => {
-    if (slot?.finished || liveRace.status === 'countdown' || liveRace.status === 'racing' || liveRace.status === 'podium') {
-      setHasPlayedInRace(true);
+    if (slot?.finished || liveRace.status === 'podium') {
+      setHasCompletedMatch(true);
     }
   }, [slot?.finished, liveRace.status]);
 
-  // Keep session URL parameter in sync if user joined active lobby
-  useEffect(() => {
-    if (liveRace.status === 'lobby' && urlSession && urlSession !== liveRace.raceId) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('session', liveRace.raceId);
-      window.history.replaceState({}, '', url.toString());
-      setSessionRaceId(liveRace.raceId);
-    }
-  }, [liveRace.status, urlSession, liveRace.raceId]);
+  // Determine if this controller is now disconnected:
+  // 1. If the match completed and host returned to lobby
+  // 2. If the host raceId changed to a new match session
+  // 3. If the controller had previously claimed this slot, but the slot was cleared by host/admin
+  const isGameEnded =
+    (hasCompletedMatch && liveRace.status === 'lobby') ||
+    (boundSessionId && liveRace.raceId && boundSessionId !== liveRace.raceId);
 
   // Track if user completed registration during this session
   const [hasRegistered, setHasRegistered] = useState<boolean>(() => {
@@ -78,17 +78,18 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
 
   const [playerName, setPlayerName] = useState<string>(slot?.playerName || '');
 
-  // If registration is disabled and slot is not yet assigned, auto-assign slot directly
+  // Auto-assign slot ONLY if the game is in the matching active lobby AND not disconnected
   useEffect(() => {
-    // Only auto-claim if game is in lobby
+    if (isGameEnded) return;
     if (liveRace.status !== 'lobby') return;
+    if (urlSession && liveRace.raceId && urlSession !== liveRace.raceId) return;
 
     if (!settings.registrationEnabled && !slot?.assigned) {
       joinSlotDirectly(characterId, char.name, deviceId).then(() => {
         setHasRegistered(true);
       });
     }
-  }, [settings.registrationEnabled, slot?.assigned, characterId, char.name, deviceId, liveRace.status]);
+  }, [isGameEnded, settings.registrationEnabled, slot?.assigned, characterId, char.name, deviceId, liveRace.status, urlSession, liveRace.raceId]);
 
   // Handle registration submission
   const handleRegistrationComplete = (name: string) => {
@@ -122,22 +123,8 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
     );
   }
 
-  // 1. Stale Session Check: Player tried to join with an old QR code while race is already running or on podium
-  if (urlSession && liveRace.raceId && urlSession !== liveRace.raceId && (liveRace.status === 'racing' || liveRace.status === 'podium')) {
-    return (
-      <DisconnectedScreen
-        characterId={characterId}
-        reason="expired_qr"
-        isMuted={isMuted}
-        onToggleSound={onToggleSound}
-        onRefresh={() => window.location.reload()}
-      />
-    );
-  }
-
-  // 2. Automatic Disconnection After Game Ends:
-  // When the player played in a match and the host resets to lobby for a brand new game match:
-  if (hasPlayedInRace && liveRace.status === 'lobby' && sessionRaceId && liveRace.raceId !== sessionRaceId) {
+  // 1. Automatic Disconnection: Once the game ends or a new match is generated, disconnect this device completely!
+  if (isGameEnded) {
     return (
       <DisconnectedScreen
         characterId={characterId}
@@ -145,16 +132,29 @@ export const MobileControllerView: React.FC<MobileControllerViewProps> = ({
         isMuted={isMuted}
         onToggleSound={onToggleSound}
         onRefresh={() => {
-          setHasPlayedInRace(false);
-          setSessionRaceId(liveRace.raceId);
-          window.location.reload();
+          // When scanning or refreshing for the new match, clear stale state
+          window.location.href = window.location.pathname;
+        }}
+      />
+    );
+  }
+
+  // 2. Stale Session Check: Player tried to join an old QR code while race is already active/podium
+  if (urlSession && liveRace.raceId && urlSession !== liveRace.raceId) {
+    return (
+      <DisconnectedScreen
+        characterId={characterId}
+        reason="expired_qr"
+        isMuted={isMuted}
+        onToggleSound={onToggleSound}
+        onRefresh={() => {
+          window.location.href = window.location.pathname;
         }}
       />
     );
   }
 
   // 3. Slot Claimed by Another Player Check:
-  // If registration is enabled and another player already claimed this slot in the active lobby
   const isMySlot = slot?.playerId === deviceId || (typeof window !== 'undefined' && sessionStorage.getItem(`rr_reg_${characterId}`) === 'true');
   if (settings.registrationEnabled && slot?.assigned && !isMySlot && liveRace.status === 'lobby') {
     return (
