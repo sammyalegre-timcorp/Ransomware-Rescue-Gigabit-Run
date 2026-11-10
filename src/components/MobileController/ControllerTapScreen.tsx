@@ -259,15 +259,15 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
             handleTap(e.clientX, e.clientY);
           }}
           onMouseUp={() => setIsPressing(false)}
-          className={`relative w-[min(80vw,340px,44vh)] h-[min(80vw,340px,44vh)] rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-75 transform active:scale-95 shadow-2xl overflow-hidden ${
+          className={`relative w-[min(84vw,360px,46vh)] h-[min(84vw,360px,46vh)] rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-75 transform active:scale-95 shadow-2xl overflow-hidden ${
             isPressing ? 'scale-95' : 'scale-100 hover:scale-[1.02]'
           }`}
           style={{
             background: `radial-gradient(circle at 35% 35%, ${char.primaryColor}38, #070c18)`,
             border: `6px solid ${char.primaryColor}`,
             boxShadow: isPressing
-              ? `0 0 40px ${char.primaryColor}, inset 0 0 30px ${char.primaryColor}`
-              : `0 0 50px ${char.glowColor}`
+              ? `0 0 45px ${char.primaryColor}, inset 0 0 35px ${char.primaryColor}`
+              : `0 0 55px ${char.glowColor}`
           }}
         >
           {/* Circular Progress Ring */}
@@ -286,7 +286,7 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
           </svg>
 
           {/* Character Avatar with Stepping Feet - ENLARGED to consume space */}
-          <div className="pointer-events-none transform transition-transform scale-105 sm:scale-120 my-1">
+          <div className="pointer-events-none transform transition-transform scale-110 sm:scale-125 my-1">
             <CharacterAvatar
               characterId={characterId}
               size="lg"
@@ -297,11 +297,11 @@ export const ControllerTapScreen: React.FC<ControllerTapScreenProps> = ({
           </div>
 
           <div className="text-center pointer-events-none mt-1">
-            <span className="block text-xs sm:text-sm md:text-base font-mono font-black tracking-widest uppercase text-white drop-shadow">
+            <span className="block text-sm sm:text-base md:text-lg font-mono font-black tracking-widest uppercase text-white drop-shadow">
               TAP TO PUMP!
             </span>
             <span
-              className="text-[11px] sm:text-xs font-mono font-bold tracking-wide mt-0.5 block"
+              className="text-xs sm:text-sm font-mono font-bold tracking-wide mt-0.5 block"
               style={{ color: char.primaryColor }}
             >
               {char.cyberQuote}

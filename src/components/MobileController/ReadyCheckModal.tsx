@@ -49,35 +49,35 @@ export const ReadyCheckModal: React.FC<ReadyCheckModalProps> = ({
           )}
         </div>
 
-        <div className="my-1 flex justify-center scale-85 sm:scale-95">
-          <CharacterAvatar characterId={characterId} size="md" glow={true} />
+        <div className="my-2 flex justify-center transform scale-110 sm:scale-120">
+          <CharacterAvatar characterId={characterId} size="lg" glow={true} />
         </div>
 
-        <div className="pt-1">
-          <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/40 mb-1.5 uppercase tracking-wider">
+        <div className="pt-2">
+          <span className="inline-block px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/50 mb-2 uppercase tracking-wider">
             RANSOMWARE RESCUE // SYSTEM CHECK
           </span>
 
-          <h2 className="text-lg sm:text-xl font-black italic font-['Chakra_Petch'] text-slate-100">
+          <h2 className="text-2xl sm:text-3xl font-black italic font-['Chakra_Petch'] text-white">
             Are you ready?
           </h2>
 
-          <p className="text-xs text-slate-300 mt-1 font-mono">
+          <p className="text-sm sm:text-base text-slate-200 mt-2 font-mono">
             Protocol <span className="text-cyan-400 font-bold">{playerName || char.name}</span>, prepare to pump emergency bandwidth!
           </p>
 
-          <p className="text-[10px] text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-1">
             Tap rapidly to send emergency patch data packets to the core server.
           </p>
 
-          <div className="mt-3">
+          <div className="mt-4">
             <button
               onClick={handleReady}
-              className="w-full py-2.5 sm:py-3 rounded-xl font-black font-['Chakra_Petch'] text-sm sm:text-base tracking-wider bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+              className="w-full py-3.5 sm:py-4 rounded-2xl font-black font-['Chakra_Petch'] text-base sm:text-lg tracking-wider bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-95"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              YES, I'M READY!
-              <Zap className="w-4 h-4 text-amber-300" />
+              <CheckCircle2 className="w-5 h-5 text-slate-950" />
+              <span>YES, I'M READY!</span>
+              <Zap className="w-5 h-5 text-amber-300" />
             </button>
           </div>
         </div>

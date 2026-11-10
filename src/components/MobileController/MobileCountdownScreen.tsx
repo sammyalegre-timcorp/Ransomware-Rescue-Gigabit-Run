@@ -70,74 +70,76 @@ export const MobileCountdownScreen: React.FC<MobileCountdownScreenProps> = ({
   return (
     <div className="h-dvh max-h-dvh w-full bg-slate-950 text-slate-100 flex flex-col justify-between items-center p-3 sm:p-4 text-center select-none overflow-hidden max-w-md mx-auto">
       {/* Top Beacon with "Presented by TIM" and integrated audio button */}
-      <header className="shrink-0 flex items-center justify-between w-full border-b border-slate-800 pb-2 bg-slate-900/60 px-2 py-1.5 rounded-xl">
-        <div className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 font-bold">
-          <Wifi className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+      <header className="shrink-0 flex items-center justify-between w-full border-b border-slate-800 pb-2.5 bg-slate-900/80 px-3 py-2 rounded-2xl shadow-md">
+        <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-cyan-400 font-bold">
+          <Wifi className="w-4 h-4 text-cyan-400 animate-pulse" />
           <span>Presented by TIM</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {onToggleSound && (
             <button
               onClick={onToggleSound}
-              className="p-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
               title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
             >
-              {isMuted ? <VolumeX className="w-3 h-3 text-red-400" /> : <Volume2 className="w-3 h-3 text-cyan-400" />}
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400" />}
             </button>
           )}
-          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-400 font-mono text-[10px] font-bold">
-            <Radio className="w-2.5 h-2.5 animate-spin text-cyan-400" />
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 font-mono text-xs font-bold shadow-sm">
+            <Radio className="w-3 h-3 animate-spin text-cyan-400" />
             DISPATCH PROTOCOL
           </div>
         </div>
       </header>
 
-      {/* Main Countdown Centerpiece - Scaled to fit on any mobile screen */}
-      <div className="flex flex-col items-center my-auto shrink-0 py-0.5">
-        <div className="relative mb-1.5">
-          <div className="absolute -inset-3 rounded-full border border-cyan-500/20 animate-ping pointer-events-none" />
-          <div className="absolute -inset-1.5 rounded-full border border-fuchsia-500/30 animate-pulse pointer-events-none" />
+      {/* Main Countdown Centerpiece - Substantially Enlarged & High Impact */}
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto py-2">
+        {/* Giant Glowing Countdown Clock */}
+        <div className="relative mb-3 sm:mb-4">
+          <div className="absolute -inset-6 rounded-full border-2 border-cyan-500/25 animate-ping pointer-events-none" />
+          <div className="absolute -inset-3 rounded-full border-2 border-fuchsia-500/40 animate-pulse pointer-events-none" />
 
           {/* Glowing Circular Number Container */}
           <div
-            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center border-3 sm:border-4 shadow-xl transition-all duration-300"
+            className="w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full flex items-center justify-center border-4 sm:border-6 shadow-2xl transition-all duration-300"
             style={{
-              background: `radial-gradient(circle at 35% 35%, ${char.primaryColor}25, #020617)`,
+              background: `radial-gradient(circle at 35% 35%, ${char.primaryColor}35, #020617)`,
               borderColor: secondsLeft > 0 ? char.primaryColor : '#10B981',
-              boxShadow: `0 0 30px ${char.glowColor}`
+              boxShadow: `0 0 45px ${char.glowColor}`
             }}
           >
             {secondsLeft > 0 ? (
-              <span className="text-4xl sm:text-5xl font-black font-['Chakra_Petch'] italic bg-gradient-to-b from-white via-cyan-200 to-cyan-500 bg-clip-text text-transparent transform animate-bounce">
+              <span className="text-6xl sm:text-7xl md:text-8xl font-black font-['Chakra_Petch'] italic bg-gradient-to-b from-white via-cyan-100 to-cyan-400 bg-clip-text text-transparent transform animate-bounce drop-shadow-[0_0_25px_rgba(6,182,212,0.6)]">
                 {secondsLeft}
               </span>
             ) : (
-              <span className="text-2xl sm:text-3xl font-black font-['Chakra_Petch'] italic text-emerald-400 tracking-wider animate-pulse">
+              <span className="text-3xl sm:text-4xl md:text-5xl font-black font-['Chakra_Petch'] italic text-emerald-400 tracking-wider animate-pulse drop-shadow-[0_0_30px_rgba(16,185,129,0.8)]">
                 GO!
               </span>
             )}
           </div>
         </div>
 
-        <div className="scale-65 sm:scale-75 my-0">
-          <CharacterAvatar characterId={characterId} size="md" glow={true} stepPhase={secondsLeft} isMoving={true} />
+        {/* Character Avatar - Prominent with Step Animation */}
+        <div className="transform scale-110 sm:scale-125 my-2">
+          <CharacterAvatar characterId={characterId} size="lg" glow={true} stepPhase={secondsLeft} isMoving={true} />
         </div>
 
-        <h2 className="text-sm sm:text-base font-black italic font-['Chakra_Petch'] mt-0.5 text-slate-100">
+        <h2 className="text-2xl sm:text-3xl font-black italic font-['Chakra_Petch'] mt-2 text-white drop-shadow">
           {char.name}
         </h2>
-        <p className="text-[10px] font-mono text-cyan-400">
+        <p className="text-xs sm:text-sm font-mono font-bold text-cyan-300 mt-0.5">
           Pilot: {playerName || 'Security Protocol'}
         </p>
       </div>
 
-      {/* Bottom Instructions Alert - 100% visible on screen */}
-      <footer className="shrink-0 w-full bg-slate-900/80 border border-slate-800 rounded-xl p-2 mb-1 shadow-sm">
-        <div className="flex items-center justify-center gap-1.5 text-amber-400 font-bold text-xs font-mono mb-0.5">
-          <Zap className="w-3.5 h-3.5 text-amber-400" />
+      {/* Bottom Instructions Alert - Bold, Visible, and Well-Spaced */}
+      <footer className="shrink-0 w-full bg-slate-900/95 border-2 border-amber-500/40 rounded-2xl p-3 sm:p-3.5 mb-1 shadow-lg backdrop-blur-md">
+        <div className="flex items-center justify-center gap-2 text-amber-400 font-black text-sm sm:text-base font-['Chakra_Petch'] italic tracking-wide mb-1">
+          <Zap className="w-4 h-4 text-amber-400 animate-bounce" />
           PREPARE YOUR FINGERS!
         </div>
-        <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono">
+        <p className="text-xs sm:text-sm text-slate-300 font-mono leading-relaxed">
           As soon as countdown hits 0, tap rapidly to pump bandwidth and push the patch!
         </p>
       </footer>
