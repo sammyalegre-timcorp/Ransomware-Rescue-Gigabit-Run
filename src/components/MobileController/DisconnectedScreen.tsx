@@ -6,7 +6,7 @@ import { QrCode, Wifi, RotateCcw, Volume2, VolumeX, ShieldAlert } from 'lucide-r
 
 interface DisconnectedScreenProps {
   characterId: CharacterId;
-  reason?: 'expired_qr' | 'game_ended' | 'slot_cleared';
+  reason?: 'expired_qr' | 'game_ended' | 'slot_cleared' | 'slot_taken';
   isMuted?: boolean;
   onToggleSound?: () => void;
   onRefresh?: () => void;
@@ -20,6 +20,18 @@ export const DisconnectedScreen: React.FC<DisconnectedScreenProps> = ({
   onRefresh
 }) => {
   const char = CHARACTERS[characterId];
+
+  const getTitle = () => {
+    if (reason === 'slot_taken') return 'SLOT ALREADY CLAIMED';
+    if (reason === 'expired_qr') return 'QR CODE EXPIRED';
+    return 'GAME ENDED // DISCONNECTED';
+  };
+
+  const getSubtitle = () => {
+    if (reason === 'slot_taken') return 'This Character Is Piloted by Another Player';
+    if (reason === 'expired_qr') return 'Please Scan the Live QR on the Host Display';
+    return 'New QR Codes Generated for Next Match';
+  };
 
   return (
     <div className="h-dvh max-h-dvh w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-3 sm:p-4 text-center select-none overflow-y-auto max-w-md mx-auto">
@@ -40,7 +52,7 @@ export const DisconnectedScreen: React.FC<DisconnectedScreenProps> = ({
             </button>
           )}
           <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] font-bold">
-            DISCONNECTED
+            {reason === 'slot_taken' ? 'SLOT BUSY' : 'DISCONNECTED'}
           </span>
         </div>
       </header>
@@ -63,23 +75,36 @@ export const DisconnectedScreen: React.FC<DisconnectedScreenProps> = ({
         )}
 
         <h2 className="text-lg sm:text-xl font-black italic font-['Chakra_Petch'] text-slate-100 tracking-wide">
-          {reason === 'expired_qr' ? 'QR CODE EXPIRED' : 'GAME ENDED // DISCONNECTED'}
+          {getTitle()}
         </h2>
 
         <p className="text-xs text-cyan-400 font-mono mt-1">
-          New QR Codes Generated for Next Match
+          {getSubtitle()}
         </p>
 
         <div className="mt-3 bg-slate-900/90 border border-slate-800 rounded-xl p-3 text-left space-y-2 max-w-xs shadow-lg">
-          <p className="text-[11px] text-slate-300 font-mono leading-relaxed">
-            • All mobile devices are automatically disconnected after each game session.
-          </p>
-          <p className="text-[11px] text-slate-300 font-mono leading-relaxed">
-            • Fresh, unique QR codes are now displayed on the main host screen.
-          </p>
-          <p className="text-[11px] text-amber-300 font-mono font-bold leading-relaxed">
-            👉 Point your phone camera at the screen and scan your protocol's new QR code to play!
-          </p>
+          {reason === 'slot_taken' ? (
+            <>
+              <p className="text-[11px] text-slate-300 font-mono leading-relaxed">
+                • {char?.name || 'This protocol'} is already being piloted by another player in this match.
+              </p>
+              <p className="text-[11px] text-amber-300 font-mono font-bold leading-relaxed">
+                👉 Look at the host screen and scan the QR code for any available protocol!
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] text-slate-300 font-mono leading-relaxed">
+                • All mobile devices are automatically disconnected after each game session.
+              </p>
+              <p className="text-[11px] text-slate-300 font-mono leading-relaxed">
+                • Fresh, unique QR codes are displayed on the main host screen.
+              </p>
+              <p className="text-[11px] text-amber-300 font-mono font-bold leading-relaxed">
+                👉 Point your phone camera at the screen and scan your protocol's new QR code to play!
+              </p>
+            </>
+          )}
         </div>
       </div>
 

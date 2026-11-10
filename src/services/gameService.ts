@@ -197,10 +197,11 @@ export async function registerPlayer(
 
 export async function joinSlotDirectly(
   characterId: CharacterId,
-  playerName: string = 'Protocol'
+  playerName: string = 'Protocol',
+  customPlayerId?: string
 ): Promise<string> {
   try {
-    const playerId = `player_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    const playerId = customPlayerId || `player_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const liveRef = doc(db, 'live_race', 'current');
 
     await updateDoc(liveRef, {
@@ -309,25 +310,18 @@ export async function submitTapBatch(
   currentLiveRace: LiveRaceDoc
 ): Promise<void> {
   if (currentLiveRace.status !== 'racing') return;
-  const currentSlot = currentLiveRace.slots[characterId];
-  if (!currentSlot || currentSlot.finished) return;
+  const slot = currentLiveRace.slots[characterId];
+  if (!slot || slot.finished) return;
 
   const now = Date.now();
   const liveRef = doc(db, 'live_race', 'current');
 
   try {
-    const snap = await getDoc(liveRef);
-    if (!snap.exists()) return;
-
-    const data = snap.data() as LiveRaceDoc;
-    if (data.status !== 'racing') return;
-
-    const slot = data.slots[characterId];
-    if (!slot || slot.finished) return;
+    const data = currentLiveRace;
 
     // Use current race targetTaps
     const targetTaps = data.targetTaps || DEFAULT_SETTINGS.requiredTaps;
-    const newTapCount = Math.min(slot.tapCount + tapDelta, targetTaps);
+    const newTapCount = Math.min((slot.tapCount || 0) + tapDelta, targetTaps);
     const finishedNow = newTapCount >= targetTaps;
 
     let finishRank = slot.finishRank;
