@@ -49,7 +49,7 @@ export const MobileCountdownScreen: React.FC<MobileCountdownScreenProps> = ({
               startedAt: Date.now(),
               countdownRemaining: 0,
               isSoloMode,
-              soloTimeLimit: 15
+              soloTimeLimit: liveRace.soloTimeLimit || settings.soloTimeLimit || 15
             });
           }
           return 0;
@@ -92,23 +92,23 @@ export const MobileCountdownScreen: React.FC<MobileCountdownScreenProps> = ({
         </div>
       </header>
 
-      {/* Main Countdown Centerpiece - Proportional to fit on any mobile screen */}
-      <div className="flex flex-col items-center my-auto shrink-0 py-1">
-        <div className="relative mb-2">
-          <div className="absolute -inset-4 rounded-full border border-cyan-500/20 animate-ping pointer-events-none" />
-          <div className="absolute -inset-2 rounded-full border border-fuchsia-500/30 animate-pulse pointer-events-none" />
+      {/* Main Countdown Centerpiece - Scaled to fit on any mobile screen */}
+      <div className="flex flex-col items-center my-auto shrink-0 py-0.5">
+        <div className="relative mb-1.5">
+          <div className="absolute -inset-3 rounded-full border border-cyan-500/20 animate-ping pointer-events-none" />
+          <div className="absolute -inset-1.5 rounded-full border border-fuchsia-500/30 animate-pulse pointer-events-none" />
 
           {/* Glowing Circular Number Container */}
           <div
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center border-4 shadow-xl transition-all duration-300"
+            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center border-3 sm:border-4 shadow-xl transition-all duration-300"
             style={{
               background: `radial-gradient(circle at 35% 35%, ${char.primaryColor}25, #020617)`,
               borderColor: secondsLeft > 0 ? char.primaryColor : '#10B981',
-              boxShadow: `0 0 35px ${char.glowColor}`
+              boxShadow: `0 0 30px ${char.glowColor}`
             }}
           >
             {secondsLeft > 0 ? (
-              <span className="text-5xl sm:text-6xl font-black font-['Chakra_Petch'] italic bg-gradient-to-b from-white via-cyan-200 to-cyan-500 bg-clip-text text-transparent transform animate-bounce">
+              <span className="text-4xl sm:text-5xl font-black font-['Chakra_Petch'] italic bg-gradient-to-b from-white via-cyan-200 to-cyan-500 bg-clip-text text-transparent transform animate-bounce">
                 {secondsLeft}
               </span>
             ) : (
@@ -119,20 +119,20 @@ export const MobileCountdownScreen: React.FC<MobileCountdownScreenProps> = ({
           </div>
         </div>
 
-        <div className="scale-80 sm:scale-90 my-0.5">
+        <div className="scale-65 sm:scale-75 my-0">
           <CharacterAvatar characterId={characterId} size="md" glow={true} stepPhase={secondsLeft} isMoving={true} />
         </div>
 
-        <h2 className="text-base sm:text-lg font-black italic font-['Chakra_Petch'] mt-1 text-slate-100">
+        <h2 className="text-sm sm:text-base font-black italic font-['Chakra_Petch'] mt-0.5 text-slate-100">
           {char.name}
         </h2>
-        <p className="text-[10px] sm:text-[11px] font-mono text-cyan-400">
+        <p className="text-[10px] font-mono text-cyan-400">
           Pilot: {playerName || 'Security Protocol'}
         </p>
       </div>
 
       {/* Bottom Instructions Alert - 100% visible on screen */}
-      <footer className="shrink-0 w-full bg-slate-900/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 mb-1 shadow-sm">
+      <footer className="shrink-0 w-full bg-slate-900/80 border border-slate-800 rounded-xl p-2 mb-1 shadow-sm">
         <div className="flex items-center justify-center gap-1.5 text-amber-400 font-bold text-xs font-mono mb-0.5">
           <Zap className="w-3.5 h-3.5 text-amber-400" />
           PREPARE YOUR FINGERS!

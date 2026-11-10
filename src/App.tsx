@@ -112,6 +112,25 @@ export default function App() {
     setCurrentUrl({ pathname: path, search, hash: '' });
   };
 
+  // Auto-start and keep background music playing during idle, lobby QR screen, and matches
+  // MUST be placed at top of component before any conditional returns!
+  useEffect(() => {
+    if (!isMuted && !isController && !isAdminRoute) {
+      soundEngine.startBgm();
+    }
+    const enableAudio = () => {
+      if (!soundEngine.isMuted && !isController && !isAdminRoute) {
+        soundEngine.startBgm();
+      }
+    };
+    window.addEventListener('click', enableAudio);
+    window.addEventListener('touchstart', enableAudio);
+    return () => {
+      window.removeEventListener('click', enableAudio);
+      window.removeEventListener('touchstart', enableAudio);
+    };
+  }, [isMuted, isController, isAdminRoute]);
+
   // 1. Admin Panel view - Strictly accessible only via /admin route
   if (isAdminRoute) {
     return (
@@ -155,26 +174,6 @@ export default function App() {
   // 3. Shared Main Host Display View (Completely non-scrollable, fits in viewport)
   return (
     <div className="relative h-screen max-h-screen w-full bg-slate-950 flex flex-col justify-between overflow-hidden select-none">
-      {/* Top Floating Controls for Host (Fullscreen + Sound) */}
-      <div className="fixed top-3 right-3 z-40 flex items-center gap-2">
-        <button
-          onClick={toggleFullscreen}
-          className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 transition-colors shadow-lg cursor-pointer flex items-center gap-1.5 text-xs font-mono"
-          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-        >
-          {isFullscreen ? <Minimize className="w-4 h-4 text-cyan-400" /> : <Maximize className="w-4 h-4 text-slate-300" />}
-          <span className="hidden sm:inline text-[10px]">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
-        </button>
-
-        <button
-          onClick={toggleSound}
-          className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 transition-colors shadow-lg cursor-pointer"
-          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-        >
-          {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
-        </button>
-      </div>
-
       {/* Render Current Phase on Main Display */}
       <main className="flex-1 min-h-0 w-full overflow-hidden">
         {liveRace.status === 'lobby' && (
@@ -183,6 +182,8 @@ export default function App() {
             settings={settings}
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
+            isMuted={isMuted}
+            onToggleSound={toggleSound}
           />
         )}
 
@@ -193,6 +194,8 @@ export default function App() {
             settings={settings}
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
+            isMuted={isMuted}
+            onToggleSound={toggleSound}
           />
         )}
 
@@ -202,6 +205,8 @@ export default function App() {
             settings={settings}
             isFullscreen={isFullscreen}
             onToggleFullscreen={toggleFullscreen}
+            isMuted={isMuted}
+            onToggleSound={toggleSound}
             onOpenAdmin={() => navigateTo('/admin')}
           />
         )}

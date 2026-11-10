@@ -6,13 +6,15 @@ import { CharacterAvatar } from '../common/CharacterAvatar';
 import { resetRaceLobby, archiveRaceHistory } from '../../services/gameService';
 import { soundEngine } from '../../services/sound';
 import { calculateSoloScore } from '../../utils/scoring';
-import { Trophy, Medal, Wifi, Maximize, Minimize, ShieldCheck, AlertTriangle, CheckCircle, Clock, QrCode, ArrowRight } from 'lucide-react';
+import { Trophy, Medal, Wifi, Maximize, Minimize, ShieldCheck, AlertTriangle, CheckCircle, Clock, QrCode, ArrowRight, Volume2, VolumeX } from 'lucide-react';
 
 interface PodiumPhaseProps {
   liveRace: LiveRaceDoc;
   settings: GameSettings;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  isMuted?: boolean;
+  onToggleSound?: () => void;
   onOpenAdmin: () => void;
 }
 
@@ -20,7 +22,9 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
   liveRace,
   settings,
   isFullscreen,
-  onToggleFullscreen
+  onToggleFullscreen,
+  isMuted,
+  onToggleSound
 }) => {
   const [autoResetSeconds, setAutoResetSeconds] = useState<number>(25);
 
@@ -166,6 +170,15 @@ export const PodiumPhase: React.FC<PodiumPhaseProps> = ({
               </>
             )}
           </div>
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              className="inline-flex items-center gap-1.5 p-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 cursor-pointer transition-colors shadow-sm"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400" />}
+            </button>
+          )}
           {onToggleFullscreen && (
             <button
               onClick={onToggleFullscreen}

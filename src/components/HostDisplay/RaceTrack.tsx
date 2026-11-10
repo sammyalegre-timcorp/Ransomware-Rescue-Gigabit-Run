@@ -16,7 +16,9 @@ import {
   ShieldAlert,
   Maximize,
   Minimize,
-  Clock
+  Clock,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 interface RaceTrackProps {
@@ -24,13 +26,17 @@ interface RaceTrackProps {
   settings: GameSettings;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  isMuted?: boolean;
+  onToggleSound?: () => void;
 }
 
 export const RaceTrack: React.FC<RaceTrackProps> = ({
   liveRace,
   settings,
   isFullscreen,
-  onToggleFullscreen
+  onToggleFullscreen,
+  isMuted,
+  onToggleSound
 }) => {
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [commentary, setCommentary] = useState<string>('EMERGENCY PATCH TRANSMISSION UNDERWAY! PUMPING GIGABIT BANDWIDTH!');
@@ -66,17 +72,12 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
     }
   }, [liveRace.slots]);
 
-  // Start high-intensity cyber background music when racing!
+  // Start high-intensity cyber background music when racing or idle
   useEffect(() => {
-    if (liveRace.status === 'racing') {
+    if (!isMuted) {
       soundEngine.startBgm();
-    } else {
-      soundEngine.stopBgm();
     }
-    return () => {
-      soundEngine.stopBgm();
-    };
-  }, [liveRace.status]);
+  }, [isMuted]);
 
   const assignedSlots = Object.values(liveRace.slots).filter((s) => s.assigned);
   const isSoloMode = liveRace.isSoloMode ?? (assignedSlots.length === 1);
@@ -122,119 +123,103 @@ export const RaceTrack: React.FC<RaceTrackProps> = ({
 
   return (
     <div className="h-screen max-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-3 md:p-4 overflow-hidden select-none">
-      {/* Top Race HUD Telemetry - Compact Header with "Presented by TIM" and NO admin button */}
-      <header className="shrink-0 flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 rounded-xl px-4 py-2 mb-1.5 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      {/* Top Race HUD Telemetry - ONE SINGLE UNIFIED HEADER (Timer is the main centerpiece in Solo Mode) */}
+      <header className="shrink-0 flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 rounded-xl px-3 sm:px-4 md:px-5 py-2 mb-2 backdrop-blur-md shadow-lg">
+        {/* Left: Presented by TIM & Title & Patch size */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold">
             <Wifi className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             <span>Presented by TIM</span>
           </div>
-          <span className="text-slate-700">|</span>
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-[11px] font-bold animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            {isStaged
-              ? 'STAGING GATES ACTIVE'
-              : isSoloMode
-              ? `SOLO TIME ATTACK // ${soloTimeLimit}s TIME TO BEAT`
-              : 'LIVE GIGABIT STREAM'}
+          <span className="text-slate-700 hidden sm:inline">|</span>
+          <div className="flex flex-col">
+            <h2 className="text-xs sm:text-sm md:text-base font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch'] truncate max-w-[140px] sm:max-w-xs md:max-w-sm">
+              {settings.gameTitle}
+            </h2>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <Gauge className="w-3 h-3" />
+                Patch: {targetMB.toLocaleString()} MB
+              </span>
+              <span>•</span>
+              <span className="text-cyan-300 font-bold">
+                {isSoloMode ? 'SOLO TIME ATTACK' : 'LIVE GIGABIT STREAM'}
+              </span>
+            </div>
           </div>
-          <h2 className="text-base md:text-xl font-black italic tracking-wide bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-['Chakra_Petch'] truncate max-w-sm">
-            {settings.gameTitle}
-          </h2>
         </div>
 
-        {/* Global Transfer Status & HUD */}
-        <div className="flex items-center gap-3 text-xs font-mono">
-          {isSoloMode ? (
-            <div className="bg-slate-950/80 border border-amber-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-slate-400 text-[11px]">Time to Beat:</span>
-              <span className="text-amber-300 font-bold font-mono text-sm">{soloTimeLimit}s</span>
+        {/* Center: When Solo Mode, THE TIMER IS THE MAIN THING SEEN! */}
+        {isSoloMode ? (
+          <div className="flex items-center justify-center mx-2">
+            <div
+              className={`flex items-center gap-2.5 sm:gap-3.5 px-3.5 sm:px-6 py-1 sm:py-1.5 rounded-2xl border-2 transition-all ${
+                Number(remainingTimeSeconds) <= 5 && !isStaged
+                  ? 'bg-red-950/95 border-red-500 text-red-300 animate-pulse shadow-[0_0_35px_rgba(239,68,68,0.7)]'
+                  : 'bg-slate-950/95 border-amber-400/80 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.35)]'
+              }`}
+            >
+              <Clock
+                className={`w-5 h-5 sm:w-7 sm:h-7 ${
+                  Number(remainingTimeSeconds) <= 5 && !isStaged ? 'text-red-400 animate-spin' : 'text-amber-400'
+                }`}
+              />
+              <div className="flex flex-col text-left">
+                <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest leading-none">
+                  TIME TO BEAT
+                </span>
+                <div className="flex items-baseline gap-0.5 leading-none mt-0.5">
+                  <span className="text-2xl sm:text-4xl md:text-5xl font-black font-['Chakra_Petch'] tracking-tight">
+                    {isStaged ? soloTimeLimit.toFixed(1) : remainingTimeSeconds}
+                  </span>
+                  <span className="text-xs sm:text-lg font-bold text-amber-400/80 font-mono">s</span>
+                </div>
+              </div>
+              <div className="hidden md:flex flex-col text-right pl-3 border-l border-slate-800">
+                <span className="text-[9px] font-mono text-slate-400 uppercase">Challenge</span>
+                <span
+                  className={`text-xs font-mono font-black ${
+                    Number(remainingTimeSeconds) > 0 ? 'text-emerald-400' : 'text-red-400'
+                  }`}
+                >
+                  {isStaged ? 'PREPARING' : Number(remainingTimeSeconds) > 0 ? 'BEAT THE CLOCK' : 'TIME UP'}
+                </span>
+              </div>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 text-xs font-mono">
             <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
               <span className="text-slate-400 text-[11px]">Time:</span>
               <span className="text-cyan-300 font-bold">{elapsedTimeSeconds}s</span>
             </div>
-          )}
-
-          <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-            <Gauge className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-slate-400 text-[11px]">Emergency Patch:</span>
-            <span className="text-emerald-300 font-bold">{targetMB.toLocaleString()} MB</span>
           </div>
+        )}
+
+        {/* Right: Audio + Fullscreen Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              className="p-1.5 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 transition-colors shadow-sm cursor-pointer"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
+            </button>
+          )}
           {onToggleFullscreen && (
             <button
               onClick={onToggleFullscreen}
-              className="flex items-center gap-1.5 bg-slate-950/80 border border-cyan-500/40 hover:border-cyan-400 rounded-lg px-2.5 py-1 text-[11px] font-mono text-cyan-300 hover:text-white transition-colors cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 bg-slate-950/80 border border-cyan-500/40 hover:border-cyan-400 rounded-lg px-2.5 py-1.5 text-xs font-mono text-cyan-300 hover:text-white transition-colors cursor-pointer shadow-sm"
               title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
-              {isFullscreen ? <Minimize className="w-3.5 h-3.5 text-cyan-400" /> : <Maximize className="w-3.5 h-3.5 text-cyan-400" />}
-              <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
+              {isFullscreen ? <Minimize className="w-4 h-4 text-cyan-400" /> : <Maximize className="w-4 h-4 text-cyan-400" />}
+              <span className="hidden sm:inline text-[11px]">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
             </button>
           )}
         </div>
       </header>
-
-      {/* Prominent Solo Mode "Time to Beat" Banner - Large & Eye-Catching */}
-      {isSoloMode && (
-        <div className="shrink-0 mb-1.5 bg-gradient-to-r from-slate-900/95 via-slate-900 to-slate-900/95 border-2 border-amber-500/50 rounded-2xl px-4 py-2 flex items-center justify-between shadow-[0_0_30px_rgba(245,158,11,0.25)]">
-          <div className="flex items-center gap-3">
-            <div
-              className={`p-2 rounded-xl transition-colors ${
-                Number(remainingTimeSeconds) <= 5 && !isStaged
-                  ? 'bg-red-500/20 text-red-400 animate-bounce'
-                  : 'bg-amber-500/20 text-amber-400'
-              }`}
-            >
-              <Clock className="w-6 h-6 md:w-8 md:h-8" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] md:text-xs font-mono font-black text-amber-400 tracking-wider uppercase">
-                  TIME TO BEAT // EMERGENCY DEADLINE
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
-                  Target: {targetMB.toLocaleString()} MB
-                </span>
-              </div>
-              <div className="text-xs md:text-sm font-['Chakra_Petch'] text-slate-200 mt-0.5">
-                {Number(remainingTimeSeconds) <= 5 && !isStaged
-                  ? '⚠️ CRITICAL: TIME EXPIRING! RAPID PUMP REQUIRED TO SECURE CORE!'
-                  : `Transfer ${targetMB.toLocaleString()} MB before clock expires to achieve SUCCESS`}
-              </div>
-            </div>
-          </div>
-
-          {/* Enormous digital countdown clock */}
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex items-baseline gap-1 px-4 md:px-6 py-1 md:py-1.5 rounded-2xl border-2 font-mono transition-all ${
-                Number(remainingTimeSeconds) <= 5 && !isStaged
-                  ? 'bg-red-950/90 border-red-500 text-red-300 animate-pulse shadow-[0_0_35px_rgba(239,68,68,0.7)]'
-                  : 'bg-slate-950/95 border-amber-400/80 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.35)]'
-              }`}
-            >
-              <span className="text-3xl md:text-5xl font-black font-['Chakra_Petch'] tracking-tight">
-                {isStaged ? soloTimeLimit.toFixed(1) : remainingTimeSeconds}
-              </span>
-              <span className="text-base md:text-2xl font-bold text-amber-400/80">s</span>
-            </div>
-
-            <div className="hidden sm:flex flex-col items-end text-right">
-              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">CHALLENGE</span>
-              <span
-                className={`text-xs md:text-sm font-mono font-black ${
-                  Number(remainingTimeSeconds) > 0 ? 'text-emerald-400' : 'text-red-400'
-                }`}
-              >
-                {isStaged ? 'PREPARING' : Number(remainingTimeSeconds) > 0 ? 'BEAT THE CLOCK' : 'TIME UP'}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Staging / Commentary Alert Ticker with Solo rules */}
       <div className="shrink-0 mb-1.5 bg-slate-900/60 border border-slate-800 rounded-lg px-3.5 py-1.5 flex items-center gap-2.5">

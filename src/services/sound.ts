@@ -96,7 +96,6 @@ class CyberSoundEngine {
   }
 
   public playFinishChime() {
-    this.stopBgm(); // Stop race background music when race finishes
     if (this.isMuted) return;
     try {
       this.initContext();

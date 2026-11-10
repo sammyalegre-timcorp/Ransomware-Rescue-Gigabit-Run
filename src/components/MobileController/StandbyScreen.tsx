@@ -60,65 +60,65 @@ export const StandbyScreen: React.FC<StandbyScreenProps> = ({
         </div>
       </header>
 
-      {/* Character Identity */}
+      {/* Character Identity - Compact & Centered */}
       <div className="shrink-0 flex flex-col items-center my-0.5">
-        <div className="scale-65 sm:scale-75 my-0">
+        <div className="scale-60 sm:scale-70 my-0">
           <CharacterAvatar characterId={characterId} size="md" glow={true} />
         </div>
         <h1 className="text-sm sm:text-base font-black italic font-['Chakra_Petch'] text-slate-100">
           {char.name}
         </h1>
-        <p className="text-[9px] sm:text-[10px] font-mono text-cyan-400">
+        <p className="text-[10px] font-mono text-cyan-400">
           Pilot: {playerName || 'Security Protocol'}
         </p>
       </div>
 
-      {/* Game Instruction Box - Compact and perfectly fitted */}
-      <div className="shrink-0 bg-slate-900/90 border border-red-500/30 rounded-xl p-2 sm:p-2.5 text-left shadow-lg my-0.5">
-        <div className="flex items-center gap-1.5 text-red-400 font-mono text-[9px] sm:text-[10px] font-bold mb-1 uppercase tracking-wider">
+      {/* Mission & Objective Briefing - Compact & clean to avoid pushing bottom button off-screen */}
+      <div className="shrink-0 bg-slate-900/90 border border-red-500/30 rounded-xl p-2 sm:p-2.5 text-left shadow-md my-0.5">
+        <div className="flex items-center gap-1.5 text-red-400 font-mono text-[9px] sm:text-[10px] font-bold mb-0.5 uppercase tracking-wider">
           <ShieldAlert className="w-3 h-3 text-red-400 shrink-0" />
           CRITICAL MISSION BRIEFING
         </div>
         <p className="text-[9px] sm:text-[10px] text-slate-300 font-sans leading-tight">
-          A ransomware exploit has breached the network. The IT team dispatches 4 AI Security Protocols to push a 1 Terabyte emergency patch to the core server. Because bandwidth is limited, only the first protocol to reach the server can lock it down and save the company.
+          Push the 1TB emergency patch to lock down the core server before ransomware breaches the company network.
         </p>
 
-        <div className="mt-1.5 pt-1.5 border-t border-slate-800/80 bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-          <div className="text-[9px] sm:text-[10px] font-bold text-amber-400 font-mono mb-0.5">
-            {readyRacers === 1 ? '1-PLAYER SOLO OBJECTIVE:' : 'THE OBJECTIVE:'}
+        <div className="mt-1 pt-1 border-t border-slate-800/80 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800/60">
+          <div className="text-[10px] font-bold text-amber-400 font-mono mb-0.5">
+            {readyRacers === 1 ? '🎯 SOLO OBJECTIVE:' : '🎯 THE OBJECTIVE:'}
           </div>
-          <p className="text-[9px] sm:text-[10px] text-slate-300 font-sans leading-tight">
+          <p className="text-[10px] text-slate-300 font-sans leading-tight">
             {readyRacers === 1 ? (
               <>
-                Tap rapidly to pump Mbps! Transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> within <strong>15 seconds</strong>. Earn <strong className="text-amber-400">100 PTS</strong> if you finish in ≤1s, down to <strong className="text-amber-400">1 PT</strong> at 14s.
+                Tap rapidly to transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> before the <strong className="text-amber-400">{settings.soloTimeLimit || 15}s</strong> Time to Beat expires to achieve <strong className="text-emerald-400 font-bold">SUCCESS</strong>!
               </>
             ) : (
               <>
-                Tap rapidly to pump bandwidth (Mbps). The first player to transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> deploys the patch, secures the network, and wins the match.
+                Tap rapidly to pump bandwidth (Mbps). First protocol to transfer <strong className="text-cyan-400 font-bold">{targetMB} MB</strong> deploys the patch and wins!
               </>
             )}
           </p>
         </div>
       </div>
 
-      {/* Bottom Start Controls - Always completely visible with ample breathing room */}
-      <footer className="shrink-0 mt-0.5 pt-0.5 pb-2">
-        <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[10px] font-mono text-slate-400 mb-1">
-          <Users className="w-3 h-3 text-cyan-400" />
-          <span>{readyRacers} Protocols Ready {readyRacers === 1 ? '(Solo Time Trial)' : 'in Lobby'}</span>
+      {/* Bottom Start Controls - Always 100% visible on mobile viewport */}
+      <footer className="shrink-0 mt-auto pt-1 pb-1">
+        <div className="flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-slate-400 mb-1">
+          <Users className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{readyRacers} Protocol{readyRacers === 1 ? '' : 's'} Ready {readyRacers === 1 ? '(Solo Time Trial)' : 'in Lobby'}</span>
         </div>
 
         <button
           onClick={handleStartGame}
           disabled={hasStartedCountdown}
-          className="w-full py-2.5 px-4 rounded-xl font-black font-['Chakra_Petch'] text-sm tracking-wider bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-slate-950 shadow-[0_0_20px_rgba(249,115,22,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+          className="w-full py-2.5 sm:py-3 px-4 rounded-xl font-black font-['Chakra_Petch'] text-sm sm:text-base tracking-wider bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-slate-950 shadow-[0_0_20px_rgba(249,115,22,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
         >
           <Flame className="w-4 h-4 text-amber-200 animate-pulse" />
-          {readyRacers === 1 ? 'START SOLO TIME TRIAL?' : 'START GAME?'}
+          {readyRacers === 1 ? 'START SOLO TIME TRIAL' : 'START GAME'}
           <Play className="w-3.5 h-3.5 fill-slate-950" />
         </button>
-        <p className="text-[8.5px] font-mono text-slate-500 mt-0.5">
-          Presented by TIM • Triggers {settings.countdownDuration || 5}s countdown on your screen
+        <p className="text-[9px] font-mono text-slate-400 mt-1">
+          Presented by TIM • Triggers {settings.countdownDuration || 5}s countdown
         </p>
       </footer>
     </div>

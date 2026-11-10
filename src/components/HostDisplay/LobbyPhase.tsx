@@ -16,7 +16,9 @@ import {
   Wifi,
   ShieldAlert,
   Maximize,
-  Minimize
+  Minimize,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 interface LobbyPhaseProps {
@@ -24,13 +26,17 @@ interface LobbyPhaseProps {
   settings: GameSettings;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  isMuted?: boolean;
+  onToggleSound?: () => void;
 }
 
 export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
   liveRace,
   settings,
   isFullscreen,
-  onToggleFullscreen
+  onToggleFullscreen,
+  isMuted,
+  onToggleSound
 }) => {
   const [qrCodes, setQrCodes] = useState<Record<CharacterId, string>>({
     firewall_frank: '',
@@ -61,6 +67,13 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
   const readyCount = Object.values(liveRace.slots).filter((s) => s.assigned && s.isReady).length;
   const assignedCount = Object.values(liveRace.slots).filter((s) => s.assigned).length;
   const targetMB = (liveRace.targetTaps || settings.requiredTaps || 1000).toLocaleString();
+
+  // Ensure background music is playing on the QR screen and during idle time
+  useEffect(() => {
+    if (!isMuted) {
+      soundEngine.startBgm();
+    }
+  }, [isMuted]);
 
   const handleStartRace = async () => {
     soundEngine.playClick();
@@ -94,6 +107,15 @@ export const LobbyPhase: React.FC<LobbyPhaseProps> = ({
             <span>Prep:</span>
             <span className="text-amber-400 font-bold">{settings.countdownDuration}s</span>
           </div>
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              className="p-1.5 rounded-lg bg-slate-900/90 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 transition-colors shadow-sm cursor-pointer"
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400" />}
+            </button>
+          )}
           {onToggleFullscreen && (
             <button
               onClick={onToggleFullscreen}
